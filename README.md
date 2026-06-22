@@ -18,6 +18,7 @@ Made in Bangladesh, built for the world. Apache 2.0.
 | [ui_ux.md](./ui_ux.md) | Screen-by-screen UI spec: web portal (login, onboarding, dashboard, playground, ledger, top-up, API keys), Tauri tray agent, Grafana dashboards |
 | [governance.md](./governance.md) | Role hierarchy, admin portal screens, config schemas (scheduler, rate limits, models, ledger, alerts), ledger audit protocol, abuse prevention |
 | [critique.md](./critique.md) | Full-team critique: 28 issues severity-ranked, pre-Phase-0 action plan |
+| [guide.md](./guide.md) | Non-technical ebook-style guide: pre-Phase 0 prerequisites, Phase 0 day-by-day roadmap, glossary |
 | [research.md](./research.md) | Component research: benchmarks, API shapes, code samples, verdicts for all OSS dependencies |
 
 ---

@@ -111,6 +111,7 @@ The `research.md` report contains detailed benchmarks and code samples. Key numb
 
 | File | Contents |
 |------|----------|
+| `guide.md` | Non-technical ebook-style guide: pre-Phase 0 prerequisites, Phase 0 day-by-day roadmap, glossary |
 | `research.md` | Component research report: benchmarks, API shapes, code samples, verdicts for all OSS dependencies |
 | `project.md` | Product identity, features F1–F9, phase roadmap, BD market context, success metrics |
 | `architecture.md` | System diagram, Blackboard pattern, scheduler/router, model sharding, API gateway flow, security, failure modes |
