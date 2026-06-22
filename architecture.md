@@ -258,13 +258,13 @@ Post-completion hook (LiteLLM success callback):
 ## 6. Observability Architecture
 
 ```
-Every Node Agent (every 15s)
+Every Node Agent
+  /metrics endpoint on port 9100 (Prometheus text format)
+  Exposed on WireGuard mesh IP — NOT the public internet
        │
-       ▼ HTTP POST
-Prometheus Pushgateway (central)
-       │
-       ▼ scrape every 30s
-Prometheus Server
+       ▼ HTTP GET every 30s via WireGuard mesh IPs
+Prometheus Server (must be joined to the WireGuard mesh
+  to reach nodes behind CGNAT — scrapes mesh IPs directly)
        │
        ├──► Grafana (dashboards — see ui_ux.md)
        └──► Alertmanager
@@ -272,6 +272,8 @@ Prometheus Server
                 ├──► Slack webhook (operator alerts)
                 └──► Email (node dropout, queue overflow)
 ```
+
+**Network requirement:** Prometheus must join the headscale mesh (register as a non-contributing node) so it can reach each node agent's WireGuard IP on port 9100. Nodes behind CGNAT are unreachable from the public internet — direct scrape only works via the mesh. No Pushgateway is needed; Pushgateway is for short-lived batch jobs, not long-running daemons.
 
 ### Custom Metrics
 

@@ -34,36 +34,36 @@ Deployed at: `app.swarm-os.dev` (Cloudflare Pages)
 
 ---
 
-### Screen 1.1 — Landing / Login
+### Screen 1.1 — Login / Sign Up
 
-**Goal:** Convert visitor to registered contributor or consumer in < 60 seconds.
+**Goal:** Get authenticated in under 30 seconds.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
 │  SWARM-OS                                    [EN | বাং]  │
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
-│         Your idle GPU earns.                             │
-│         Your AI runs free.                               │
+│   Sign in to Swarm-OS                                    │
 │                                                          │
-│   [▶ Join the Swarm — Download Agent]                    │
-│   [→ Use the API — Get API Key]                          │
+│   [⬡ GitHub]              [G Google]                    │
 │                                                          │
-│   ─────────── or sign in ───────────                     │
+│   ─────────── or ───────────                             │
 │                                                          │
-│   [GitHub OAuth]   [Google OAuth]   [Email + Password]   │
+│   Email     [________________________________]           │
+│   Password  [________________________________]  [Show]   │
 │                                                          │
-│   Live stats (auto-refreshed):                           │
-│   ● 47 nodes active   ● 12.3M tokens today   ● 8 models │
+│   [Sign In]               [Create Account →]             │
+│                                                          │
+│   [Forgot password?]                                     │
 │                                                          │
 └──────────────────────────────────────────────────────────┘
 ```
 
 **UX rules:**
-- No modal on landing. Inline sign-in form expands on button click.
-- Live stats fetched from public `/api/v1/swarm/stats` — no auth required.
-- "Join the Swarm" CTA is primary (contributor-first positioning).
+- OAuth is the recommended path — shown above the fold, no typing required.
+- "Create Account" expands an inline form: email + password + role choice (Contributor / Consumer / Both).
 - Language toggle persists to `localStorage`; Bangla renders Hind Siliguri font.
+- After auth, redirect to `/dashboard`; first-time users are shown the onboarding flow (Screen 1.2).
 
 ---
 
@@ -280,23 +280,60 @@ Deployed at: `app.swarm-os.dev` (Cloudflare Pages)
 
 ### Screen 1.6 — Top-Up (BD Payment)
 
+**Step 1 — Select Amount & Method**
+
 ```
 ┌──────────────────────────────────────────────────────────┐
 │  Add Credits                                             │
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
 │  Select amount                                           │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
-│  │ 500 cr   │ │ 1,200 cr │ │ 2,600 cr │ │ Custom   │   │
-│  │ ৳200     │ │ ৳450     │ │ ৳900     │ │          │   │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘   │
+│  ┌─────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐    │
+│  │ Trial   │ │ Standard │ │ Plus     │ │ Custom   │    │
+│  │ 125 cr  │ │ 500 cr   │ │ 1,200 cr │ │ ৳___     │    │
+│  │ ৳50     │ │ ৳200     │ │ ৳450 +7% │ │ (min ৳50)│    │
+│  └─────────┘ └──────────┘ └──────────┘ └──────────┘    │
 │                                                          │
 │  Pay with                                                │
 │  ● bKash          ○ Nagad          ○ Card (Visa/MC)     │
 │                                                          │
-│  [Pay ৳200 via bKash →]                                 │
+│  [Pay ৳50 via bKash →]                                  │
 │                                                          │
 │  1 credit ≈ 100 output tokens.                          │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+```
+
+**bKash redirect flow** (steps 2–6 handled by SSLCommerz on bKash's pages):
+
+```
+ Our App                SSLCommerz / bKash
+    │                          │
+    │── Click Pay ────────────►│
+    │                          │  2. Enter bKash number
+    │                          │  3. Receive OTP via SMS
+    │                          │  4. Enter OTP
+    │                          │  5. Enter bKash PIN
+    │◄── Redirect callback ────│
+    │
+    └── Show confirmation screen (Step 2 below)
+```
+
+**Step 2 — Confirmation** *(after SSLCommerz callback)*
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  ✓  Payment Confirmed                                    │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  125 credits added to your account                       │
+│                                                          │
+│  Transaction ID:  SSLCZ-2026-xxxxx                       │
+│  Method:          bKash                                  │
+│  Amount:          ৳50                                    │
+│  New Balance:     972 credits                            │
+│                                                          │
+│  [Go to Dashboard]          [Top Up More]               │
 │                                                          │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -434,12 +471,12 @@ Pre-built dashboards — operators self-host or use Grafana Cloud free tier.
 New User
     │
     ├── Contributor Path
-    │     Landing → Sign Up → Download Agent → Hardware Detection
+    │     Login/Sign Up → Download Agent → Hardware Detection
     │     → Set Resource Limits → Join Swarm → Dashboard (earning)
     │     Total time: < 3 minutes
     │
     └── Consumer Path
-          Landing → Sign Up → Get API Key → Top Up Credits
+          Login/Sign Up → Get API Key → Top Up Credits
           → Paste base_url into OpenAI SDK → First inference
           Total time: < 2 minutes
 
