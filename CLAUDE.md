@@ -22,8 +22,8 @@ The system has five layers, each built from battle-tested OSS (no custom distrib
 
 - **Prompts never enter etcd.** Job payloads contain only routing metadata (model, job_token, max_tokens). Prompts delivered P2P to assigned nodes
 - **API keys never enter job payloads.** Use one-time job authorization tokens with 60s TTL
-- **Cross-WAN 70B sharding is not viable on BD broadband** (~960ms/token at 50Mbps). Phase 2 targets LAN topology (≥1Gbps). WAN sharding requires int8 activation quantization (Phase 3+)
-- **KV cache failover = full restart from token 0**, not checkpoint resume. Dead node's cache is unreachable
+- **Cross-WAN 70B sharding is not viable on BD broadband.** Activation tensors are ~16 KiB/hop at seq_len=1 (decode) but ~32 MiB/hop at seq_len=2048 (prefill). Prefill is the bottleneck: 5.12s/hop at 50Mbps. Phase 2 targets LAN topology (≥1Gbps). WAN sharding requires int8 activation quantization or chunked prefill (Phase 3+)
+- **KV cache failover = full restart from token 0**, not checkpoint resume. Dead node's cache is unreachable. Petals' DHT-based re-routing (client caches activations, reroutes to alternative block host) is a Phase 2+ adaptation target
 - **etcd watch streams can miss events** on compaction (ErrCompacted). Re-watch logic with point-in-time Get is mandatory
 
 ## Planned Build Toolchain
@@ -40,7 +40,7 @@ The system has five layers, each built from battle-tested OSS (no custom distrib
 
 ## Component → Language Map
 
-- **Node Agent** (Tauri v2): Rust backend (`tokio`, `llama-cpp-rs`, `etcd-client`, `sysinfo`, `nvml-wrapper`, `ed25519-dalek`) + React frontend
+- **Node Agent** (Tauri v2): Rust backend (`tokio`, `llama-cpp-2`, `etcd-client`, `sysinfo`, `nvml-wrapper`, `ed25519-dalek`) + React frontend
 - **Orchestrator**: Rust (using `tonic` gRPC) or Go (using `grpc-go`), etcd, ring topology logic
 - **API Gateway**: Python (LiteLLM, FastAPI, Redis)
 - **Mesh Control Plane**: Go (headscale + wireguard-go)
@@ -74,7 +74,8 @@ The system has five layers, each built from battle-tested OSS (no custom distrib
 
 - **exo-labs/exo is GPL-3.0** — reference/study only, no code porting. Clean-room Rust implementation of ring topology required
 - **Grafana is AGPL-3.0** — use via self-host or cloud tier; don't link into our codebase
-- **b4rtaz/distributed-llama is MIT** — preferred code reference for cross-node sharding over exo
+- **b4rtaz/distributed-llama is MIT but AVOID** — matrix-parallel (not pipeline-parallel), 2^k node constraint, custom `.bin` format (not GGUF), 972ms/forward-pass on WAN. Not suitable for Swarm-OS
+- **Cross-node sharding**: Clean-room Rust pipeline-parallel implementation. Study exo ring partitioning algorithm + Petals DHT-based fault tolerance as design references
 - All Swarm-OS code: Apache 2.0
 
 ## UI Design System
@@ -84,10 +85,33 @@ The system has five layers, each built from battle-tested OSS (no custom distrib
 - Component library: shadcn/ui + Tailwind. Radius: 8px components, 12px cards
 - Separate post-login dashboards for contributors vs consumers
 
+## Key Research Findings
+
+The `research.md` report contains detailed benchmarks and code samples. Key numbers:
+
+| Metric | Value |
+|--------|-------|
+| Rust binding | `llama-cpp-2` (utilityai) — `llama-rs` is archived, no GGUF support |
+| 7B Q4_K_M VRAM (warm) | 4.42 GiB (target headroom: 5.20 GiB) |
+| 70B Q4_K_M VRAM (warm) | 43.12 GiB (target headroom: 48.00 GiB) |
+| Metal context limit | 8192 tokens (crashes above due to Unified Memory 75% limit) |
+| RTX 4090 decode throughput | 88.5 tokens/sec |
+| M3 Max decode throughput | 48.2 tokens/sec |
+| CPU (i9-14900K) decode | 8.1 tokens/sec |
+| etcd lease expiry latency | ~5.11s avg (150ms after TTL) |
+| WireGuard CGNAT tunnel setup | 1200ms direct, 3500ms DERP fallback |
+| Tauri IPC roundtrip | 1.42ms macOS, 2.10ms Windows |
+| Tauri binary (LTO+strip) | 7.1–9.4 MiB across platforms |
+| BLAKE3 vs SHA-256 (4 GiB GGUF) | 1.45s vs 11.75s |
+| LiteLLM version pin | ≥1.82.0 (CustomLogger hooks are unstable internal APIs) |
+| iroh model distribution | ADOPT — QUIC transport, auto-resume, NAT traversal |
+| distributed-llama | AVOID — matrix-parallel, 2^k nodes, .bin format, 972ms/fwd on WAN |
+
 ## Planning Documents
 
 | File | Contents |
 |------|----------|
+| `research.md` | Component research report: benchmarks, API shapes, code samples, verdicts for all OSS dependencies |
 | `project.md` | Product identity, features F1–F9, phase roadmap, BD market context, success metrics |
 | `architecture.md` | System diagram, Blackboard pattern, scheduler/router, model sharding, API gateway flow, security, failure modes |
 | `tech_stack.md` | OSS dependency list with licenses and file citations, dependency map, model support matrix, build toolchain |

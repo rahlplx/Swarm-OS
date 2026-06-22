@@ -127,6 +127,8 @@ Node failure:
 
 No single coordinator. Any orchestrator instance watching etcd handles it.
 
+**Alternative studied (Petals):** Petals implements DHT-based re-routing where the client caches intermediate activations locally and can route them to an alternative node hosting the same block range, resuming from the failed block boundary rather than restarting. This approach is worth adapting in Phase 2+ but requires client-side activation caching infrastructure.
+
 etcd watch caveat (etcd/etcd#19179): etcd can compact history and drop watch events
   during compaction. If the Orchestrator's watch stream returns ErrCompacted, it must:
     1. Fetch current state with a point-in-time Get (get all /swarm/nodes/* and /swarm/jobs/*)
@@ -223,11 +225,12 @@ Pipeline ring forward pass:
 **Topology choice — pipeline ring (not STAR):**
 - exo-labs/exo uses weighted pipeline ring partitioning — arbitrary node counts, layers split proportionally by VRAM. This is our reference design.
 - b4rtaz/distributed-llama (MIT) uses a STAR topology (one root + N workers) and requires N = 2^k nodes, which would artificially constrain our heterogeneous pool. We studied distributed-llama but do not adopt its topology.
-- bigscience-workshop/petals (MIT) validates this pipeline approach at production scale: their published findings confirm inter-node latency — not GPU compute — is the dominant bottleneck. Activation tensor sizes for 70B models are ~2MB per layer boundary per token = 16 Megabits. At 50 Mbps BD broadband, each inter-node hop costs 16 Mb ÷ 50 Mbps = **320 ms/token**. Three WAN hops = ~960 ms overhead per token — ~1 token/sec throughput ceiling, which violates production UX even if TTFT stays under 8s.
+- bigscience-workshop/petals (MIT) validates this pipeline approach at production scale: their published findings confirm inter-node latency — not GPU compute — is the dominant bottleneck. Corrected activation tensor sizes for 70B models (hidden_dim=8192, fp16): `Size = seq_len × hidden_dim × 2 bytes`. At seq_len=1 (autoregressive decode): 1 × 8192 × 2 = 16,384 bytes ≈ **16 KiB/hop**. At seq_len=2048 (prefill): 2048 × 8192 × 2 = 33,554,432 bytes ≈ **32 MiB/hop**. The prefill phase is the bottleneck for WAN sharding. The original ~2MB estimate assumed seq_len=1 (single token); the full prefill pass is ~16× larger. At 50 Mbps BD broadband, prefill hop cost: 32 MiB = 256 Mb ÷ 50 Mbps = **5.12 s/hop**. Three WAN hops = ~15.4 s overhead for the prefill phase alone — far exceeding the 8s TTFT budget and making WAN sharding even more prohibitive than originally estimated. Decode-phase hops (16 KiB = 128 Kb ÷ 50 Mbps ≈ 2.6 ms/hop) are negligible by comparison.
   **Architectural constraint for Phase 2:** Cross-WAN sharding of 70B models requires one of:
-    (a) LAN topology (≥1 Gbps): 16 Mb ÷ 1000 Mbps = 16 ms/hop × 3 = 48 ms/token — acceptable.
-    (b) int8 activation quantization (fp32 → int8, 4× smaller = ~0.5 MB/hop): 4 Mb ÷ 50 Mbps = 80 ms × 3 = 240 ms/token — ~4 tokens/sec. Borderline but usable.
-  Phase 2 target is campus/lab nodes on LAN. WAN cross-city sharding with acceptable throughput is a Phase 3+ research item requiring int8 quant.
+    (a) LAN topology (≥1 Gbps): 256 Mb ÷ 1000 Mbps = 256 ms/hop × 3 = 768 ms prefill overhead — acceptable. Decode hops negligible.
+    (b) int8 activation quantization (fp16 → int8, 2× smaller = ~16 MiB/hop prefill): 128 Mb ÷ 50 Mbps = 2.56 s × 3 = 7.7 s prefill — borderline for 8s TTFT budget.
+    (c) Chunked prefill (split seq_len=2048 into smaller micro-batches to overlap compute and transfer) — reduces peak per-hop transfer but adds scheduling complexity.
+  Phase 2 target is campus/lab nodes on LAN. WAN cross-city sharding with acceptable throughput is a Phase 3+ research item requiring int8 quant + chunked prefill.
 - We implement ring partitioning from scratch in Rust (clean-room), since exo is GPL-3.0 and cannot be ported to our Apache-2.0 codebase. The partitioning algorithm (weighted memory split across pipeline stages) is a standard technique described in published ML systems papers and is not subject to copyright as an idea.
 
 **Source pattern (design reference only):** `exo-labs/exo/exo/topology/ring_memory_weighted_partitioning.py`

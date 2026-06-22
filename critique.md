@@ -47,7 +47,7 @@
 
 This is the product's central value proposition and it has no implementation. `llama.cpp --split-mode` works across GPUs on a single machine via PCIe — not across network nodes. Streaming hidden-state activation tensors (for Llama-3 70B at fp16: **~8MB per forward pass** at seq_len=512, hidden_dim=8192) over WireGuard requires custom serialization, transfer, and deserialization logic.
 
-**Fix:** Replace "Exo ring topology" as the primary reference with **`b4rtaz/distributed-llama`** (MIT license, implements exactly this in C++ with TCP socket transport for GGUF models). This is the correct OSS steal, not exo-labs/exo (GPL-3.0, MLX-only, Apple-only). Add to Phase 0 scope: prototype activation tensor transfer between 2 nodes using distributed-llama as the inference core.
+**Fix:** Cross-node sharding must be implemented as a clean-room Rust pipeline-parallel system. Neither exo (GPL-3.0) nor distributed-llama (matrix-parallel, 2^k node constraint, custom .bin format, 972ms/forward-pass on WAN) is suitable as a direct integration. Study exo's ring partitioning algorithm and Petals' fault-tolerant block routing as design references, then implement layer-based pipeline parallelism from scratch in Rust. Add to Phase 0 scope: prototype activation tensor transfer between 2 nodes.
 
 ### BLOCKER — Ledger Corrupts Under etcd Auto-Compaction
 
@@ -71,7 +71,7 @@ The spec says "job resumes from last checkpoint." If Node B dies, its KV cache f
 
 | Replace/Add | With | Reason |
 |-------------|------|--------|
-| Exo (GPL, Apple-only) | **b4rtaz/distributed-llama** (MIT, cross-platform, TCP-native) | Actual cross-node llama.cpp sharding |
+| Exo (GPL, Apple-only) | **Clean-room Rust pipeline-parallel** (study exo ring algorithm + Petals block routing) | distributed-llama AVOID: matrix-parallel, 2^k nodes, .bin format, WAN-hostile |
 | etcd for metrics/heartbeats | **NATS JetStream** (JetStream KV for watch semantics) | 10M msgs/sec vs etcd's 1–2k/sec; reserve etcd for job assignments only |
 | Custom scheduler | **Ray Serve** (optional, Phase 3) | Battle-tested heterogeneous cluster scheduling |
 | Petals pattern reference | Add **Petals (LAION/BigScience)** as architectural reference | BitTorrent-style weight sharding is more resilient to node failure than ring topology |
@@ -302,7 +302,7 @@ No US cloud provider will build this bundle for Bangladesh. This is the wedge. E
 
 ### Fix Before Writing Any Code (Pre-Phase 0)
 
-1. Replace exo/llama.cpp sharding with `distributed-llama` — prototype activation transfer
+1. Design clean-room Rust pipeline-parallel sharding (study exo ring partitioning + Petals fault tolerance) — prototype activation transfer
 2. Remove API key from etcd job payload → one-time job token
 3. Move ledger to SQLite WAL — remove from etcd
 4. Argon2id for API key hashing

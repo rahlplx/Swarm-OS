@@ -72,8 +72,8 @@
 
 ### F4: AI Inference Engine
 - llama.cpp as the universal backend (GGUF models)
-- Rust bindings via `llama-rs` or `llama-cpp-rs`
-- Model sharding across nodes using Exo's ring topology for 70B+ models
+- Rust bindings via `llama-cpp-2` (`utilityai/llama-cpp-rs`) — `rustformers/llama-rs` is archived
+- Model sharding across nodes using clean-room Rust pipeline-parallel ring topology for 70B+ models
 - Supported model families: Llama 3, Mistral, Qwen, Gemma, Phi
 - **Stolen from:** exo-labs/exo shard logic, ggerganov/llama.cpp
 
