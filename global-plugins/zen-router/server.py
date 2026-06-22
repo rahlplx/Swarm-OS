@@ -79,7 +79,10 @@ async def _chat(
     system: str = "",
     force_refresh: bool = False,
 ) -> dict[str, Any]:
-    models = await _fetch_free_models(api_key, force=force_refresh)
+    try:
+        models = await _fetch_free_models(api_key, force=force_refresh)
+    except Exception as exc:
+        return {"error": f"Failed to fetch free models: {exc}"}
 
     if not models:
         return {"error": "No free models available — check your API key or try again later."}
@@ -104,7 +107,11 @@ async def _chat(
                 )
                 resp.raise_for_status()
                 body = resp.json()
-                content = body["choices"][0]["message"]["content"]
+                try:
+                    content = body["choices"][0]["message"]["content"]
+                except (KeyError, IndexError, TypeError) as exc:
+                    errors.append(f"{model}: Malformed response body ({type(exc).__name__})")
+                    continue
                 usage = body.get("usage", {})
                 return {"model": model, "content": content, "usage": usage}
             except httpx.HTTPStatusError as exc:
@@ -177,7 +184,8 @@ async def list_tools() -> list[types.Tool]:
 
 @server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
-    api_key = os.environ.get("OPENCODE_ZEN_API_KEY", "")
+    arguments = arguments or {}
+    api_key = os.environ.get("OPENCODE_ZEN_API_KEY", "").strip().strip("'\"")
 
     if name == "zen_list_free_models":
         cached = _load_cache()

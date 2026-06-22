@@ -34,6 +34,7 @@ echo ""
 command -v python3 >/dev/null || error "python3 is required"
 command -v pip3   >/dev/null || error "pip3 is required"
 command -v claude >/dev/null || error "Claude Code CLI (claude) is required"
+command -v git    >/dev/null || error "git is required"
 
 if [[ -z "$ZEN_KEY" ]]; then
     warn "OPENCODE_ZEN_API_KEY not set. zen-router will be installed but won't work until you set it."
@@ -91,6 +92,7 @@ pip3 install --quiet mcp httpx
 # ── 3. Write settings.json ────────────────────────────────────────────────────
 info "Configuring ~/.claude/settings.json..."
 SETTINGS="$CLAUDE_DIR/settings.json"
+mkdir -p "$CLAUDE_DIR"
 touch "$SETTINGS"
 
 # Determine fablize hook paths
@@ -102,25 +104,28 @@ POST_TOOL_GATE="$PLUGIN_ROOT/fablize/hooks/gate_post_tool.py"
 STOP_HOOK="$PLUGIN_ROOT/fablize/hooks/gate_stop.py"
 
 # Build the new settings block
-python3 - <<PYEOF
-import json, os, sys
+# Pass all shell vars as env so the quoted heredoc (no shell expansion) can read them safely.
+# A special character in ZEN_KEY or a path cannot inject code this way.
+SETTINGS="$SETTINGS" ZEN_DIR="$ZEN_DIR" ZEN_KEY="$ZEN_KEY" \
+ROUTER_HOOK="$ROUTER_HOOK" ROUTER_GATE="$ROUTER_GATE" \
+POST_TOOL_GATE="$POST_TOOL_GATE" STOP_HOOK="$STOP_HOOK" \
+python3 - <<'PYEOF'
+import json, os
 from pathlib import Path
 
-settings_path = Path("$SETTINGS")
+settings_path = Path(os.environ["SETTINGS"])
 try:
     existing = json.loads(settings_path.read_text()) if settings_path.exists() else {}
 except json.JSONDecodeError:
     existing = {}
 
-# MCP servers
 mcp = existing.setdefault("mcpServers", {})
 mcp["zen-router"] = {
     "command": "python3",
-    "args": ["$ZEN_DIR/server.py"],
-    "env": {"OPENCODE_ZEN_API_KEY": "$ZEN_KEY"}
+    "args": [f"{os.environ['ZEN_DIR']}/server.py"],
+    "env": {"OPENCODE_ZEN_API_KEY": os.environ["ZEN_KEY"]},
 }
 
-# Hooks — merge, don't overwrite
 hooks = existing.setdefault("hooks", {})
 
 def add_hook(event, command, matcher=""):
@@ -130,16 +135,16 @@ def add_hook(event, command, matcher=""):
     for e in entries:
         for h in e.get("hooks", []):
             if h.get("command") == command:
-                return  # already registered
+                return
     entries.append({"matcher": matcher, "hooks": [{"type": "command", "command": command, "timeout": 10000}]})
 
 def add_hook_matcher(event, matcher, command):
     add_hook(event, command, matcher=matcher)
 
-add_hook("UserPromptSubmit", "$ROUTER_HOOK")
-add_hook("UserPromptSubmit", "python3 \"$ROUTER_GATE\"")
-add_hook_matcher("PostToolUse", "^(Bash|Edit|Write|NotebookEdit|MultiEdit)$", "python3 \"$POST_TOOL_GATE\"")
-add_hook("Stop", "$STOP_HOOK")
+add_hook("UserPromptSubmit", os.environ["ROUTER_HOOK"])
+add_hook("UserPromptSubmit", f"python3 \"{os.environ['ROUTER_GATE']}\"")
+add_hook_matcher("PostToolUse", "^(Bash|Edit|Write|NotebookEdit|MultiEdit)$", f"python3 \"{os.environ['POST_TOOL_GATE']}\"")
+add_hook("Stop", os.environ["STOP_HOOK"])
 
 settings_path.write_text(json.dumps(existing, indent=2))
 print("settings.json updated")
