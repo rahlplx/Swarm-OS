@@ -16,7 +16,7 @@ These projects are **not dependencies** — they are the competitive and academi
 - **What It Does:** BitTorrent-style distributed inference — users load a few transformer layers each, the network chains them to process prompts. The closest academic precedent to what we are building.
 - **Key Learnings to Extract:**
   - **Inter-node latency is the #1 bottleneck, not GPU compute** (confirmed in their paper). Our 8s P95 SLA must account for BD ISP latency, not just VRAM speed.
-  - Activation tensor sizes for 70B models: ~2MB per layer boundary per token. At 50 Mbps (typical BD broadband), each hop costs ~0.3ms. 3 hops = ~1ms extra per token. Manageable.
+  - Activation tensor sizes for 70B models: ~2MB per layer boundary per token = 16 Megabits. At 50 Mbps (typical BD broadband), 16 Mb ÷ 50 Mbps = **320 ms/hop**. 3 WAN hops = **~960 ms/token** — ~1 token/sec ceiling. **Not manageable on WAN.** Phase 2 must target LAN topology (≥1 Gbps → 16 ms/hop × 3 = 48 ms/token). Cross-city WAN sharding requires int8 activation quantization (→ 80 ms/hop) and is a Phase 3+ research item.
   - They use HTTP long-polling between nodes. We use WireGuard direct P2P — lower latency, more complexity.
   - Their failure recovery: prompt re-sent from scratch if any node drops (same as our design — no checkpoint resume).
 - **Study:** `petals/src/server/`, `petals/src/client/routing/`, `petals/tests/test_server.py`

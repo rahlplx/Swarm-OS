@@ -65,7 +65,7 @@
     <decision id="S5">Inference sandboxing: seccomp on Linux, App Sandbox on macOS. No cross-node KV cache access.</decision>
     <decision id="S6">WireGuard (ChaCha20-Poly1305) for all inter-node traffic. etcd uses client certificate auth, not exposed to internet.</decision>
     <decision id="S7">Fake-contribution detection: challenge-response with known greedy-decode (temp=0) outputs only. Peer output comparison NOT used (non-deterministic at temp > 0 causes false positives).</decision>
-    <decision id="S8">Sock-puppet prevention: NVIDIA GPU UUID deduplicated on registration. AMD/CPU: motherboard serial + CPU ID fingerprint via sysinfo.</decision>
+    <decision id="S8">Sock-puppet prevention: Hardware fingerprint = SHA-256(gpu_uuid+":"+motherboard_serial+":"+cpu_id+":"+machine_id) for NVIDIA; SHA-256(motherboard_serial+":"+cpu_id+":"+machine_id) for AMD/CPU. ":" delimiters between fields prevent prefix-collision attacks. /etc/machine-id is primary anchor; OEM sentinel strings ("To be filled by O.E.M.", empty) treated as absent.</decision>
     <decision id="S9">Prompt privacy: prompts delivered P2P directly to assigned nodes; never stored in etcd.</decision>
   </security_decisions>
 
