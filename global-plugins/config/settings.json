@@ -1,0 +1,68 @@
+{
+  "_comment": "Template for ~/.claude/settings.json — run install.sh to apply with correct PLUGIN_DIR",
+  "mcpServers": {
+    "zen-router": {
+      "command": "python3",
+      "args": ["PLUGIN_DIR/zen-router/server.py"],
+      "env": {
+        "OPENCODE_ZEN_API_KEY": "YOUR_OPENCODE_ZEN_API_KEY_HERE"
+      }
+    }
+  },
+
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash PLUGIN_DIR/fablize/hooks/router.sh",
+            "timeout": 10000
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"PLUGIN_DIR/fablize/hooks/gate_prompt.py\"",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^(Bash|Edit|Write|NotebookEdit|MultiEdit)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"PLUGIN_DIR/fablize/hooks/gate_post_tool.py\"",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"PLUGIN_DIR/fablize/hooks/gate_stop.py\"",
+            "timeout": 10000
+          }
+        ]
+      }
+    ]
+  },
+
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(bash PLUGIN_DIR/fablize/hooks/*:*)"
+    ]
+  }
+}
