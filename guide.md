@@ -1,3 +1,21 @@
+---
+type: guide
+title: Pre-Flight Checklist & Phase 0 Roadmap
+description: Non-technical ebook-style guide for the founder — pre-Phase 0 prerequisites and day-by-day Phase 0 roadmap
+tags: [planning, non-technical, phase-0, pre-phase-0]
+timestamp: "2026-06-22"
+status: active
+phase: "0"
+authority:
+  - phase_0_day_by_day
+  - non_technical_explanations
+depends_on:
+  - /project
+  - /architecture
+  - /research
+token_estimate: 10000
+---
+
 # Before We Build: The Swarm-OS Pre-Flight Checklist
 
 > Everything that needs to happen before Phase 0 implementation begins — and the day-by-day roadmap for Phase 0 itself. Written for the founder, not the engineer.
@@ -17,6 +35,7 @@ Think of it this way: these are the foundation inspections before breaking groun
 ---
 
 ## Chapter 1: The Sharding Problem — How Computers Share a Brain
+*(Technical details: [architecture.md §4](./architecture.md))*
 
 ### What This Is
 
@@ -214,6 +233,7 @@ The design must specify which secrets management approach to use before coding b
 ---
 
 ## Chapter 8: What the Research Already Told Us
+*(Full report: [research.md](./research.md))*
 
 Before anyone writes implementation code, the plan calls for cloning every open-source dependency, running it locally, and extracting its actual behavior — API shapes, error codes, performance numbers, failure modes. This homework has been completed. The results are in `research.md` (over 60 pages of detailed findings).
 
@@ -262,6 +282,7 @@ The research homework is done. Every Phase 0 dependency has been tested, its qui
 ---
 
 ## Chapter 9: Four Weeks to a Working Prototype
+*(Feature spec: [project.md Phase 0](./project.md))*
 
 Phase 0 delivers one thing: a desktop application that runs AI models locally on a single device, accessible via the standard OpenAI API format. No networking between devices. No shared compute pool. No credit economy. Just the core inference pipeline, polished and working.
 
@@ -574,17 +595,7 @@ Phase 0 is the foundation everything else builds on. If the single-device experi
 
 ## Appendix B: Source Documents
 
-| Document | What It Contains |
-|----------|-----------------|
-| [guide.md](./guide.md) | This document — the non-technical step-by-step guide you are reading |
-| [research.md](./research.md) | Component research: benchmarks, API shapes, code samples, verdicts for all dependencies |
-| [project.md](./project.md) | Product identity, features F1-F9, phase roadmap, market context, success metrics |
-| [architecture.md](./architecture.md) | System diagram, Blackboard pattern, scheduler, model sharding, API flow, security, failure modes |
-| [tech_stack.md](./tech_stack.md) | Open-source dependency list with licenses, dependency map, model support matrix, build toolchain |
-| [ui_ux.md](./ui_ux.md) | Screen-by-screen UI specification for web portal, Tauri tray agent, Grafana dashboards |
-| [governance.md](./governance.md) | Role hierarchy, admin portal, configuration schemas, ledger audit protocol, abuse prevention |
-| [critique.md](./critique.md) | 28 issues severity-ranked with fixes, consolidated pre-Phase 0 action plan |
-| [verify-prompt.md](./verify-prompt.md) | Structured verification prompt for community validation of architecture decisions |
+See [index.md](./index.md) for the complete document map with authority assignments and reading paths.
 
 ## Appendix C: The Numbers That Matter
 

@@ -1,3 +1,14 @@
+---
+type: context
+title: Claude Code Onboarding
+description: AI assistant context for the Swarm-OS planning repo
+tags: [architecture, planning]
+timestamp: "2026-06-22"
+status: active
+phase: "0-4"
+token_estimate: 1900
+---
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -109,14 +120,23 @@ The `research.md` report contains detailed benchmarks and code samples. Key numb
 
 ## Planning Documents
 
-| File | Contents |
-|------|----------|
-| `guide.md` | Non-technical ebook-style guide: pre-Phase 0 prerequisites, Phase 0 day-by-day roadmap, glossary |
-| `research.md` | Component research report: benchmarks, API shapes, code samples, verdicts for all OSS dependencies |
-| `project.md` | Product identity, features F1–F9, phase roadmap, BD market context, success metrics |
-| `architecture.md` | System diagram, Blackboard pattern, scheduler/router, model sharding, API gateway flow, security, failure modes |
-| `tech_stack.md` | OSS dependency list with licenses and file citations, dependency map, model support matrix, build toolchain |
-| `ui_ux.md` | Screen-by-screen UI spec for web portal, Tauri tray agent, Grafana dashboards |
-| `governance.md` | Role hierarchy, admin portal, config schemas (scheduler, rate limits, models, ledger, alerts), ledger audit protocol, abuse prevention |
-| `critique.md` | 28 issues severity-ranked with fixes, consolidated pre-Phase-0 action plan |
-| `verify-prompt.md` | Structured verification prompt for community validation of all architecture decisions |
+See [index.md](./index.md) for the complete document map with:
+- Authority assignments (which file is canonical for each concept)
+- Reading paths by phase and role
+- Token estimates for context budgeting
+
+Key files for Phase 0: project.md, architecture.md (§1-5, §7), tech_stack.md (Tier 1-2), ui_ux.md, guide.md (Part 2).
+
+## Document Authority (OKF)
+
+When information appears in multiple docs, the authoritative source is:
+- Scheduler algorithm → architecture.md §3
+- Credit formula / ledger config → governance.md §3.4
+- Security controls (Argon2id, Ed25519, key prefixes) → architecture.md §7
+- Ledger entry format / audit → governance.md §4
+- Hardware fingerprint → governance.md §5.3
+- Activation tensor sizing → architecture.md §4
+- OSS dependency details → tech_stack.md
+- Benchmark numbers → research.md
+
+When docs conflict, the authoritative source wins. See [index.md](./index.md) for the full authority map.

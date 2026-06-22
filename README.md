@@ -1,3 +1,14 @@
+---
+type: context
+title: Swarm-OS README
+description: Project overview, architecture summary, credit economy, roadmap
+tags: [planning]
+timestamp: "2026-06-22"
+status: active
+phase: "0-4"
+token_estimate: 900
+---
+
 # Swarm-OS
 
 > Your idle GPU earns. Your AI runs free.
@@ -10,16 +21,9 @@ Made in Bangladesh, built for the world. Apache 2.0.
 
 ## Planning Docs
 
-| Document | What it covers |
-|----------|---------------|
-| [project.md](./project.md) | Product identity, feature spec (F1–F9), phase roadmap, BD market context, success metrics |
-| [architecture.md](./architecture.md) | System diagram, Blackboard pattern (etcd), scheduler/router, model sharding (ring topology), API gateway flow, observability, security, failure modes |
-| [tech_stack.md](./tech_stack.md) | OSS steal list with licenses, dependency map, language breakdown, model support matrix |
-| [ui_ux.md](./ui_ux.md) | Screen-by-screen UI spec: web portal (login, onboarding, dashboard, playground, ledger, top-up, API keys), Tauri tray agent, Grafana dashboards |
-| [governance.md](./governance.md) | Role hierarchy, admin portal screens, config schemas (scheduler, rate limits, models, ledger, alerts), ledger audit protocol, abuse prevention |
-| [critique.md](./critique.md) | Full-team critique: 28 issues severity-ranked, pre-Phase-0 action plan |
-| [guide.md](./guide.md) | Non-technical ebook-style guide: pre-Phase 0 prerequisites, Phase 0 day-by-day roadmap, glossary |
-| [research.md](./research.md) | Component research: benchmarks, API shapes, code samples, verdicts for all OSS dependencies |
+See [index.md](./index.md) for the full document map with authority assignments and reading paths.
+
+Credit formula canonical source: [governance.md §3.4](./governance.md#34--ledger-policy).
 
 ---
 

@@ -1,3 +1,20 @@
+---
+type: prompt
+title: Community Verification Prompt
+description: Structured verification prompt for community validation of all architecture decisions
+tags: [planning, security, architecture]
+timestamp: "2026-06-22"
+status: active
+phase: "pre-phase-0"
+authority:
+  - verification_prompt
+depends_on:
+  - /project
+  - /architecture
+  - /governance
+token_estimate: 4200
+---
+
 <swarm_os_verify>
 
 <meta>

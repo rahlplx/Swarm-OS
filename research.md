@@ -1,3 +1,20 @@
+---
+type: reference
+title: Component Research Report
+description: Benchmarks, API shapes, code samples, and verdicts for all OSS dependencies
+tags: [reference, technical, inference, networking, observability]
+timestamp: "2026-06-22"
+status: active
+phase: "0-4"
+authority:
+  - benchmark_data
+  - api_shapes
+  - code_samples
+  - oss_verdicts
+depends_on: []
+token_estimate: 17000
+---
+
 # Swarm-OS Component Research: Clone, Extract, Compare, Document
 
 This document serves as an expert-level system architectural specification and structured
