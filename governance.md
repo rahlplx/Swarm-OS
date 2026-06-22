@@ -220,7 +220,7 @@ All configuration is stored in etcd under `/swarm/config/` and validated against
   },
   "debit_formula": {
     "input_tokens_cost": 0.006,
-    "output_tokens_cost": 0.009,
+    "output_tokens_cost": 0.01,
     "stream_surcharge": 0.0
   },
   "chain": {
@@ -262,7 +262,7 @@ All configuration is stored in etcd under `/swarm/config/` and validated against
     },
     {
       "name": "high_latency",
-      "condition": "swarm_job_duration_seconds{quantile='0.95'} > 10",
+      "condition": "swarm_job_duration_seconds{quantile='0.95'} > 8",
       "severity": "warning",
       "channels": ["slack_webhook"]
     },
@@ -271,6 +271,13 @@ All configuration is stored in etcd under `/swarm/config/` and validated against
       "condition": "swarm_ledger_chain_valid == 0",
       "severity": "critical",
       "channels": ["slack_webhook", "email"]
+    }
+  ],
+  "inhibit_rules": [
+    {
+      "source_match": {"alertname": "node_dropout_spike"},
+      "target_match_re": {"alertname": "queue_overflow|high_latency"},
+      "equal": ["swarm_instance"]
     }
   ]
 }
@@ -305,11 +312,14 @@ LedgerEntry {
 Run via Admin Portal or CLI: `swarm-admin ledger verify --node node_7f3a`
 
 ```
-Step 1: Fetch all ledger entries for node from etcd, ordered by timestamp
+Step 1: Fetch all ledger entries for node from SQLite WAL on orchestrator, ordered by timestamp
+        Note: O(n) over total entry count — batch-paginate for nodes with > 100k entries
 Step 2: For each entry:
         a. Verify Ed25519 signature using node's registered public key
         b. Verify prev_entry_hash == SHA-256(previous entry serialized)
         c. Verify credits_delta matches formula: tokens × rate from config at timestamp
+           Skip ADMIN_ADJUST entries in this step — they have no token count and are
+           signed by the operator key, not the node key; their validity is checked separately
 Step 3: Report:
         - Total entries verified
         - First/last timestamp
@@ -368,7 +378,7 @@ When a user disputes a credit charge or earning discrepancy:
 
 | Period | Storage | Access |
 |--------|---------|--------|
-| 0–90 days | Live etcd | Real-time query |
+| 0–90 days | SQLite WAL on orchestrator | Real-time query |
 | 90 days – 1 year | Compressed JSON in object store (S3/R2) | API query with 5s latency |
 | > 1 year | Cold archive (Glacier/B2) | Manual request only |
 | Never deleted | Chain verification snapshots | Permanent |
@@ -382,9 +392,8 @@ When a user disputes a credit charge or earning discrepancy:
 A node could claim to have run inference without doing real work.
 
 **Mitigations:**
-- **Challenge-response validation:** Orchestrator occasionally sends a job with a known correct output (golden sample); node's response must match within tolerance.
-- **Peer cross-validation:** Same prompt sent to 2 nodes; outputs compared. If they diverge beyond threshold, both flagged for manual review.
-- **Score degradation:** Nodes that fail validation have their score penalized for 24h.
+- **Challenge-response validation:** Orchestrator occasionally sends a job with a known correct output (golden sample, greedy/temp=0 decode); node's response must match exactly. This is the only automated correctness check — LLM outputs are non-deterministic at temp>0 so peer output comparison produces false positives and is not used.
+- **Score degradation:** Nodes that fail challenge-response have their score penalized for 24h.
 - **Rate cap on earning:** A node cannot earn more credits than its score allows in a 1-hour window. (`max_credits_per_hour = node_score × 2`)
 
 ### 5.2 — API Key Abuse
