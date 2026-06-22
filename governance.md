@@ -230,7 +230,7 @@ All configuration is stored in etcd under `/swarm/config/` and validated against
     "archive_after_days": 90
   },
   "top_up": {
-    "min_purchase_bdt": 100,
+    "min_purchase_bdt": 50,
     "max_purchase_bdt": 50000,
     "gateway": "sslcommerz",
     "credits_per_bdt": 2.5
