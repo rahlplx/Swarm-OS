@@ -304,7 +304,9 @@ LedgerEntry {
   job_id:           "job_9b2c..."
   type:             "earn" | "spend"
   tokens:           1204
-  credits_delta:    +14.448
+  credits_delta_microcredits: 14448000  // integer; 1 credit = 1,000,000 microcredits. Float credits_delta
+                                        // in SHA-256 inputs causes cross-platform non-determinism (IEEE 754
+                                        // rounding differs by arch). All hash inputs use this integer field.
   timestamp:        "2025-06-22T14:32:01.123Z"
   prev_entry_hash:  SHA-256(serialized previous entry)
   signature:        Ed25519.sign(node_private_key, SHA-256(this entry minus signature field))
@@ -320,11 +322,11 @@ Each row in `admin_adjustments` has its own tamper-evidence:
 AdminAdjustment {
   id:               uuid-v4
   node_id:          "node_7f3a..."
-  credits_delta:    +14.0
+  credits_delta_microcredits: 14000000  // integer microcredits (float avoided for same reason as LedgerEntry)
   reason:           "job_9b2c ledger write failure"
   operator_key_id:  "swrm_ops_xxx"       // which operator key issued this
   timestamp:        "2025-06-22T15:00:00Z"
-  signature:        Ed25519.sign(operator_private_key, SHA-256(id+node_id+credits_delta+reason+operator_key_id+timestamp))
+  signature:        Ed25519.sign(operator_private_key, SHA-256(id+":"+node_id+":"+credits_delta_microcredits+":"+reason+":"+operator_key_id+":"+timestamp))
 }
 ```
 **Tamper-evidence:** Each `admin_adjustments` row is individually signed by the issuing operator's Ed25519 key. An attacker who can write to the SQLite file can insert or modify rows, but cannot forge a valid signature without the operator's private key. The audit protocol (§4.2 Step 3) verifies all operator signatures when reconciling the balance. This is the same trust model as the main chain — signatures, not chaining, are the tamper-evidence primitive here. Chaining `admin_adjustments` to the main chain would require ADMIN_ADJUST entries to appear in chain traversal, breaking the contiguity invariant.
@@ -342,7 +344,7 @@ Step 2: For each entry:
         a. Verify Ed25519 signature using node's registered public key
         b. Verify prev_entry_hash == SHA-256(previous entry serialized)
            (chain is contiguous — no gaps from admin adjustments since they are in a separate table)
-        c. Verify credits_delta matches formula: tokens × rate from config at timestamp
+        c. Verify credits_delta_microcredits matches formula: round(tokens × rate × 1_000_000) from config at timestamp
 Step 3: Report:
         - Total entries verified
         - First/last timestamp
@@ -357,7 +359,7 @@ Step 3: Report:
 
 **CSV columns:**
 ```
-timestamp, node_id, job_id, type, model, tokens, credits_delta, running_balance, chain_valid
+timestamp, node_id, job_id, type, model, tokens, credits_delta_microcredits, running_balance_microcredits, chain_valid
 ```
 
 **Export via Admin Portal:** Admin › Ledger › Export › [Select date range] › [JSON | CSV]
@@ -429,8 +431,8 @@ A node could claim to have run inference without doing real work.
 
 - One person cannot register the same physical GPU under multiple node IDs to earn double credits.
 - **Detection:** Hardware fingerprint is **required** for all node types. A GPU UUID alone is software-readable and can be spoofed by a malicious driver; binding it to the motherboard serial + CPU ID raises the attack cost significantly.
-  - **NVIDIA:** `SHA-256(gpu_uuid + motherboard_serial + cpu_id + machine_id)` — all four fields concatenated. GPU UUID + machine-id provides primary uniqueness; motherboard serial and CPU ID add depth.
-  - **AMD/CPU nodes:** `SHA-256(motherboard_serial + cpu_id + machine_id)` via `sysinfo` crate + `/etc/machine-id` (Linux) / `IOPlatformUUID` (macOS) / registry MachineGuid (Windows).
+  - **NVIDIA:** `SHA-256(gpu_uuid + ":" + motherboard_serial + ":" + cpu_id + ":" + machine_id)` — ":" delimiter between every field prevents prefix-collision attacks (e.g. `"abc"+"def"` == `"ab"+"cdef"` without delimiters). GPU UUID + machine-id provides primary uniqueness; motherboard serial and CPU ID add depth.
+  - **AMD/CPU nodes:** `SHA-256(motherboard_serial + ":" + cpu_id + ":" + machine_id)` via `sysinfo` crate + `/etc/machine-id` (Linux) / `IOPlatformUUID` (macOS) / registry MachineGuid (Windows).
 - **Fallback for generic serials:** Many OEM boards return `"To be filled by O.E.M."`, `"None"`, or empty for motherboard serial. The fingerprint algorithm must detect these sentinel values and exclude the serial field from the hash when any field is blank or a known-generic string. `/etc/machine-id` (Linux) is a high-entropy UUID generated on first OS install and is always present — it is the primary uniqueness anchor. The full priority order: `machine_id` (always used) → `gpu_uuid` (if NVIDIA/AMD) → `cpu_id` (always used) → `motherboard_serial` (only if non-generic).
 - Duplicate fingerprint hash → second registration rejected; operator alerted.
 

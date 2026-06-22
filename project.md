@@ -41,6 +41,9 @@
 | LM Studio | Local LLM runner | No pooling; single device only |
 | Ollama | Local model server | No sharing; no swarm |
 | Together.ai / Groq | Cloud free-tier LLM APIs | We're the infrastructure those could run on |
+| Petals (BigScience) | P2P pipeline inference, Python | We add credit economy, BDT payment, WireGuard security, BD infra |
+| PeerLLM | GGUF node hosting, community routing | No tamper-evident ledger, no BD payment, no local DERP |
+| BTTInferGrid | DePIN inference on BitTorrent, crypto | No crypto required; simpler UX; no regulatory risk in BD |
 
 ---
 
@@ -109,6 +112,62 @@
 
 ---
 
+## Pre-Phase OSS Analysis Protocol
+
+Before writing a single line of implementation code for each phase, complete this analysis checklist. The goal: extract every wire protocol, data structure, failure mode, and performance characteristic from the repos you are about to steal from — so bugs are found in OSS source, not in our production code.
+
+```
+For each phase:
+  1. CLONE all repos listed in that phase's analysis targets
+  2. RUN the reference implementation locally (follow its README exactly)
+  3. OBSERVE the behavior: wire traffic (Wireshark/tcpdump), logs, failure modes
+  4. EXTRACT: data structures, API shapes, error types, latency numbers
+  5. UPDATE tech_stack.md with specific file paths and line citations
+  6. RE-RUN verify-prompt.md on any new decisions before coding starts
+```
+
+### Phase 0 Analysis Targets (before Weeks 1–4)
+
+| Repo | What to Run | What to Extract |
+|------|-------------|----------------|
+| `ggerganov/llama.cpp` | `./llama-server -m model.gguf --port 8080` | OpenAI API shape, streaming SSE format, VRAM headroom at Q4_K_M |
+| `BerriAI/litellm` | `litellm --model ollama/llama3 --port 4000` | Proxy request path, custom_llm_provider hook, success_callback signature |
+| `tauri-apps/tauri` | `cargo create-tauri-app` → tray example | Channel API for streaming, system tray event loop, IPC latency |
+
+### Phase 1 Analysis Targets (before Weeks 5–10)
+
+| Repo | What to Run | What to Extract |
+|------|-------------|----------------|
+| `juanfont/headscale` | Self-host + `tailscale up --login-server` | Node registration flow, DERP relay fallback timing, CGNAT behaviour |
+| `etcd-io/etcd` | Single-node etcd + watch client | TTL expiry event latency, ErrCompacted rate, watch reconnect pattern |
+| `bigscience-workshop/petals` | 2-node local swarm (CPU-only demo) | Inter-node activation tensor size, HTTP long-poll vs streaming, latency profile |
+
+### Phase 2 Analysis Targets (before Weeks 11–18)
+
+| Repo | What to Run | What to Extract |
+|------|-------------|----------------|
+| `exo-labs/exo` (study only, GPL-3.0) | `exo` on 2 machines | Ring partition weights, how shard boundaries are determined, KV cache locality |
+| `b4rtaz/distributed-llama` | 2-node root+worker | STAR topology constraints (2^k nodes), matrix sharding format, TCP protocol |
+| `bigscience-workshop/petals` | 3-node chain | What happens on mid-inference node drop, re-queue latency, activation streaming |
+
+### Phase 3 Analysis Targets (before Weeks 19–24)
+
+| Repo | What to Run | What to Extract |
+|------|-------------|----------------|
+| `gpustack/gpustack` | Full stack locally | Admin UI patterns, node health polling, model management screens |
+| `prometheus/alertmanager` | With test alerts | Inhibit rule syntax, Slack webhook payload, dedup window |
+| `grafana/grafana` | Dashboard ID 1860 | Panel config for node metrics, variable templating for per-node views |
+
+### Phase 4 Analysis Targets (before Weeks 25–32)
+
+| Repo | What to Run | What to Extract |
+|------|-------------|----------------|
+| `Nondzu/LlamaTor` | Seed a GGUF via torrent | Magnet link structure, BLAKE3 hash vs SHA-256 speed on 4GB file |
+| `n0-computer/iroh` | Iroh file transfer demo | Transfer speed vs BitTorrent for large binary files, DHT structure |
+| SSLCommerz sandbox | bKash test payment | OTP timeout, callback retry behaviour, idempotency key requirement |
+
+---
+
 ## Phase Roadmap
 
 ### Phase 0 — Local Alpha (Weeks 1–4)
@@ -133,10 +192,11 @@ Goal: Two devices share one job
 Goal: 5–20 nodes, mixed hardware, model sharding
 
 - [ ] Capability scoring algorithm (VRAM/RAM/CPU weighted)
-- [ ] Exo-style ring topology for model sharding
+- [ ] Pipeline ring topology for model sharding (clean-room from exo + Petals learnings)
 - [ ] Node churn handling: job re-queue on TTL expiry
 - [ ] mDNS + gossip for LAN auto-discovery
 - [ ] API Gateway rate limiting by credit balance
+- [ ] Inter-node activation streaming: validate BD-realistic latency (Petals shows this is the #1 bottleneck, not compute)
 
 ### Phase 3 — Observability & Governance (Weeks 19–24)
 Goal: Operator-grade visibility + control
@@ -157,6 +217,8 @@ Goal: Public beta, BD market entry
 - [ ] Public API endpoint: `api.swarm-os.dev`
 - [ ] GitHub Actions CI/CD pipeline
 - [ ] Security audit (rate limits, node isolation, API auth)
+- [ ] P2P model weight distribution: nodes that have a model automatically seed it to new joiners (LlamaTor/Iroh pattern) — eliminates CDN cost for GGUF file distribution
+- [ ] BLAKE3 hash verification for model files (3–5× faster than SHA-256 for 4–7GB GGUFs; ledger chain stays SHA-256)
 
 ---
 

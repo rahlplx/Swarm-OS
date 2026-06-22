@@ -4,6 +4,70 @@
 
 ---
 
+## Tier 0 — Ecosystem Research (Study Before Building)
+
+These projects are **not dependencies** — they are the competitive and academic landscape we learn from before every phase. Clone them, run them, extract what they know, then build ours better.
+
+### Distributed Inference Precedents
+
+#### A. bigscience-workshop/petals
+- **Repo:** https://github.com/bigscience-workshop/petals
+- **License:** MIT
+- **What It Does:** BitTorrent-style distributed inference — users load a few transformer layers each, the network chains them to process prompts. The closest academic precedent to what we are building.
+- **Key Learnings to Extract:**
+  - **Inter-node latency is the #1 bottleneck, not GPU compute** (confirmed in their paper). Our 8s P95 SLA must account for BD ISP latency, not just VRAM speed.
+  - Activation tensor sizes for 70B models: ~2MB per layer boundary per token = 16 Megabits. At 50 Mbps (typical BD broadband), 16 Mb ÷ 50 Mbps = **320 ms/hop**. 3 WAN hops = **~960 ms/token** — ~1 token/sec ceiling. **Not manageable on WAN.** Phase 2 must target LAN topology (≥1 Gbps → 16 ms/hop × 3 = 48 ms/token). Cross-city WAN sharding requires int8 activation quantization (→ 80 ms/hop) and is a Phase 3+ research item.
+  - They use HTTP long-polling between nodes. We use WireGuard direct P2P — lower latency, more complexity.
+  - Their failure recovery: prompt re-sent from scratch if any node drops (same as our design — no checkpoint resume).
+- **Study:** `petals/src/server/`, `petals/src/client/routing/`, `petals/tests/test_server.py`
+- **Differentiation:** Petals is Python/global/no credit economy. We are Rust/BD-native/tamper-evident ledger.
+
+#### B. PeerLLM (peerllm.com)
+- **Repo:** https://www.peerllm.com
+- **License:** Unknown (proprietary product)
+- **What It Does:** Community AI hosting — users download GGUF models locally, register as a node, route inference traffic.
+- **Key Learnings:**
+  - Direct market competitor. Same GGUF + registration pattern as our Phase 0.
+  - No visible tamper-evident ledger, no BDT payment, no BD-specific infrastructure.
+  - **Our differentiation:** Ed25519 ledger (trust-minimised earnings), WireGuard mesh (security), SSLCommerz/bKash (BD market), local DERP relay (BD latency).
+- **Action:** Monitor their node protocol by running a node and inspecting traffic before Phase 1.
+
+#### C. BTTInferGrid (BitTorrent DePIN)
+- **What It Does:** Aggregates edge nodes on the BitTorrent network for AI inference via smart-contract-guided payment.
+- **Key Learnings:** Proves that DePIN inference is commercially viable. They use blockchain for payment; we use Ed25519 ledger — simpler, no gas fees, better UX for BD users.
+- **Key Risk to Watch:** Crypto-first DePIN projects have regulatory risk in Bangladesh. Our no-crypto approach is a deliberate advantage.
+
+---
+
+### P2P Model Weight Distribution Precedents
+
+#### D. Nondzu/LlamaTor
+- **Repo:** https://github.com/Nondzu/LlamaTor
+- **License:** MIT
+- **What It Does:** Packages GGUF model weights as `.torrent` files; users download via standard clients (qBittorrent).
+- **Key Learnings for Phase 4:**
+  - Torrent seeding of 4–7GB GGUF files works reliably. Standard BitTorrent protocol handles it.
+  - Magnet links are the distribution primitive — Mistral released Mixtral 8x7B this way; millions downloaded without CDN cost.
+  - We can seed official Swarm-OS model bundles (curated GGUF + metadata JSON) as torrents. Any contributor who has the model auto-seeds to new joiners.
+- **Study:** Torrent file structure, announce tracker config, DHT behaviour for large binary files.
+
+#### E. n0-computer/iroh
+- **Repo:** https://github.com/n0-computer/iroh
+- **License:** MIT / Apache-2.0
+- **What It Does:** Modern P2P file transfer protocol using BLAKE3 hashing and QUIC transport — used by Noema Atlas for model distribution.
+- **Key Learnings:**
+  - BLAKE3 is 3–5× faster than SHA-256 for large file verification. On a 7GB GGUF: SHA-256 = ~14s, BLAKE3 = ~3s on modern hardware.
+  - **Decision:** Use BLAKE3 for model file integrity verification in Phase 4. Keep SHA-256 for the ledger chain (established security model, no reason to change).
+  - Iroh's QUIC transport outperforms TCP BitTorrent for high-latency connections (relevant for BD mobile nodes).
+- **Study:** `iroh/iroh-blobs/` for chunked file transfer; `iroh/iroh-net/` for QUIC P2P.
+
+#### F. Industry Pattern — Magnet Link Release
+- Mistral AI released Mixtral 8x7B (47GB) via a raw magnet link tweet. Zero CDN cost. Thousands of peers seeded it instantly.
+- **Implication for Swarm-OS:** When we release our first curated model bundle (llama-3.1-8b-swarm.gguf + config.json), release it as a magnet link. Our contributor nodes auto-seed it. New contributors download from the swarm, not from us.
+- **Phase 4 checklist item:** Seed model bundles as torrents; node agent's model downloader falls back to torrent protocol if HTTP mirror is slow.
+
+---
+
 ## OSS Repos to Integrate (Steal From)
 
 ### Tier 1 — Core Architecture (Must Have)
