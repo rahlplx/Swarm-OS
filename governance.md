@@ -213,7 +213,7 @@ All configuration is stored in etcd under `/swarm/config/` and validated against
 {
   "version": 1,
   "credit_formula": {
-    "tokens_to_credits_ratio": 0.012,
+    "tokens_to_credits_ratio": 0.008,
     "score_weight_enabled": true,
     "score_bonus_threshold": 80,
     "score_bonus_multiplier": 1.1
@@ -230,10 +230,14 @@ All configuration is stored in etcd under `/swarm/config/` and validated against
     "archive_after_days": 90
   },
   "top_up": {
-    "min_purchase_bdt": 100,
+    "min_purchase_bdt": 50,
     "max_purchase_bdt": 50000,
     "gateway": "sslcommerz",
-    "credits_per_bdt": 2.5
+    "tiers": [
+      {"min_bdt": 50,  "max_bdt": 449,  "credits_per_bdt": 2.5,  "label": "Standard"},
+      {"min_bdt": 450, "max_bdt": 899,  "credits_per_bdt": 2.67, "label": "Plus (+7%)"},
+      {"min_bdt": 900, "max_bdt": null, "credits_per_bdt": 2.89, "label": "Pro (+15%)"}
+    ]
   }
 }
 ```
@@ -307,25 +311,28 @@ LedgerEntry {
 
 **Tamper-evidence:** Changing any field in entry N invalidates `prev_entry_hash` in entry N+1, breaking the chain. Verification requires the node's public key (registered in Blackboard at join time).
 
+**ADMIN_ADJUST storage:** Manual credit adjustments are stored in a **separate** `admin_adjustments` table in SQLite, NOT interleaved in the node's hash chain. They reference `node_id`, `job_id`, and `operator_key_id` but do not appear as entries in the hash chain sequence. This means `prev_entry_hash` in a regular entry always points to the previous regular entry; no entries are ever "skipped" during chain traversal.
+
 ### 4.2 — Verification Procedure
 
 Run via Admin Portal or CLI: `swarm-admin ledger verify --node node_7f3a`
 
 ```
-Step 1: Fetch all ledger entries for node from SQLite WAL on orchestrator, ordered by timestamp
+Step 1: Fetch all ledger entries for node from SQLite WAL on orchestrator (ledger_entries table),
+        ordered by timestamp. ADMIN_ADJUST records are in a separate admin_adjustments table
+        and are NOT fetched here — they do not appear in the hash chain.
         Note: O(n) over total entry count — batch-paginate for nodes with > 100k entries
 Step 2: For each entry:
         a. Verify Ed25519 signature using node's registered public key
         b. Verify prev_entry_hash == SHA-256(previous entry serialized)
+           (chain is contiguous — no gaps from admin adjustments since they are in a separate table)
         c. Verify credits_delta matches formula: tokens × rate from config at timestamp
-           Skip ADMIN_ADJUST entries in this step — they have no token count and are
-           signed by the operator key, not the node key; their validity is checked separately
 Step 3: Report:
         - Total entries verified
         - First/last timestamp
         - Any entries that fail signature check (potential forgery)
         - Any chain breaks (potential deletion/insertion)
-        - Net credits (earn - spend) should match user's current balance
+        - Net credits from chain (earn - spend) + admin_adjustments sum should match user's current balance
 ```
 
 ### 4.3 — Ledger Export
