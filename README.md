@@ -51,7 +51,7 @@ Key design choices:
 | Contributor earns | `tokens_generated × 0.008` (× 1.1 if node score > 80) |
 | Consumer spends | `(input_tokens × 0.006) + (output_tokens × 0.01)` |
 | Rule of thumb | 1 credit ≈ 100 output tokens |
-| BDT top-up | ৳50 → 125 cr · ৳200 → 500 cr · ৳450 → 1,200 cr (+7%) |
+| BDT top-up | ৳50 → 125 cr · ৳200 → 500 cr · ৳450 → 1,201 cr (+7%) |
 
 Platform retains the ~20% spread between earn and spend as operational reserve.
 

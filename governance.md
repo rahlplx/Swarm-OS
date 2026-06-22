@@ -315,6 +315,20 @@ LedgerEntry {
 
 **ADMIN_ADJUST storage:** Manual credit adjustments are stored in a **separate** `admin_adjustments` table in SQLite, NOT interleaved in the node's hash chain. They reference `node_id`, `job_id`, and `operator_key_id` but do not appear as entries in the hash chain sequence. This means `prev_entry_hash` in a regular entry always points to the previous regular entry; no entries are ever "skipped" during chain traversal.
 
+Each row in `admin_adjustments` has its own tamper-evidence:
+```
+AdminAdjustment {
+  id:               uuid-v4
+  node_id:          "node_7f3a..."
+  credits_delta:    +14.0
+  reason:           "job_9b2c ledger write failure"
+  operator_key_id:  "swrm_ops_xxx"       // which operator key issued this
+  timestamp:        "2025-06-22T15:00:00Z"
+  signature:        Ed25519.sign(operator_private_key, SHA-256(id+node_id+credits_delta+reason+operator_key_id+timestamp))
+}
+```
+**Tamper-evidence:** Each `admin_adjustments` row is individually signed by the issuing operator's Ed25519 key. An attacker who can write to the SQLite file can insert or modify rows, but cannot forge a valid signature without the operator's private key. The audit protocol (§4.2 Step 3) verifies all operator signatures when reconciling the balance. This is the same trust model as the main chain — signatures, not chaining, are the tamper-evidence primitive here. Chaining `admin_adjustments` to the main chain would require ADMIN_ADJUST entries to appear in chain traversal, breaking the contiguity invariant.
+
 ### 4.2 — Verification Procedure
 
 Run via Admin Portal or CLI: `swarm-admin ledger verify --node node_7f3a`
@@ -415,8 +429,9 @@ A node could claim to have run inference without doing real work.
 
 - One person cannot register the same physical GPU under multiple node IDs to earn double credits.
 - **Detection:** Hardware fingerprint is **required** for all node types. A GPU UUID alone is software-readable and can be spoofed by a malicious driver; binding it to the motherboard serial + CPU ID raises the attack cost significantly.
-  - **NVIDIA:** `SHA-256(gpu_uuid + motherboard_serial + cpu_id)` — all three fields required. Any single field mismatch → registration rejected.
-  - **AMD/CPU nodes:** `SHA-256(motherboard_serial + cpu_id)` via `sysinfo` crate.
+  - **NVIDIA:** `SHA-256(gpu_uuid + motherboard_serial + cpu_id + machine_id)` — all four fields concatenated. GPU UUID + machine-id provides primary uniqueness; motherboard serial and CPU ID add depth.
+  - **AMD/CPU nodes:** `SHA-256(motherboard_serial + cpu_id + machine_id)` via `sysinfo` crate + `/etc/machine-id` (Linux) / `IOPlatformUUID` (macOS) / registry MachineGuid (Windows).
+- **Fallback for generic serials:** Many OEM boards return `"To be filled by O.E.M."`, `"None"`, or empty for motherboard serial. The fingerprint algorithm must detect these sentinel values and exclude the serial field from the hash when any field is blank or a known-generic string. `/etc/machine-id` (Linux) is a high-entropy UUID generated on first OS install and is always present — it is the primary uniqueness anchor. The full priority order: `machine_id` (always used) → `gpu_uuid` (if NVIDIA/AMD) → `cpu_id` (always used) → `motherboard_serial` (only if non-generic).
 - Duplicate fingerprint hash → second registration rejected; operator alerted.
 
 ---

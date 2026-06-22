@@ -287,6 +287,21 @@ Prometheus Server (must be joined to the WireGuard mesh
 
 **Network requirement:** Prometheus must join the headscale mesh (register as a non-contributing node) so it can reach each node agent's WireGuard IP on port 9100. Nodes behind CGNAT are unreachable from the public internet — direct scrape only works via the mesh. No Pushgateway is needed; Pushgateway is for short-lived batch jobs, not long-running daemons.
 
+**Dynamic service discovery:** Node WireGuard IPs change as nodes join and leave; static Prometheus scrape_configs will not scale. Use Prometheus `file_sd_config`:
+- The Orchestrator watches etcd `/swarm/nodes/*/caps` and `/swarm/nodes/*/alive`.
+- On any node join or drop event, the Orchestrator rewrites `/etc/prometheus/targets/swarm_nodes.json` with the current list of WireGuard IPs + port 9100.
+- Prometheus `file_sd_config` polls this file every 30s and updates scrape targets automatically — no Prometheus restart required.
+- Alternative: `http_sd_config` pointing at a `/swarm/prometheus/targets` endpoint on the Orchestrator (same data, HTTP instead of file).
+
+```yaml
+# prometheus.yml
+scrape_configs:
+  - job_name: 'swarm_nodes'
+    file_sd_configs:
+      - files: ['/etc/prometheus/targets/swarm_nodes.json']
+        refresh_interval: 30s
+```
+
 ### Custom Metrics
 
 | Metric Name | Type | Description |
