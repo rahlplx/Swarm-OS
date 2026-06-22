@@ -237,7 +237,9 @@ All configuration is stored in etcd under `/swarm/config/` and validated against
       {"min_bdt": 50,  "max_bdt": 449,  "credits_per_bdt": 2.5,  "label": "Standard"},
       {"min_bdt": 450, "max_bdt": 899,  "credits_per_bdt": 2.67, "label": "Plus (+7%)"},
       {"min_bdt": 900, "max_bdt": null, "credits_per_bdt": 2.89, "label": "Pro (+15%)"}
-    ]
+    ],
+    "rounding": "floor",
+    "rounding_note": "Credits are always floored to 1 decimal place. e.g. ৳450 × 2.67 = 1201.5 → 1201.5 (floor at 0.1 precision = 1201.5). Displayed as integers in UI (always rounded down to whole credit)."
   }
 }
 ```
@@ -412,8 +414,10 @@ A node could claim to have run inference without doing real work.
 ### 5.3 — Node Sock-Puppeting
 
 - One person cannot register the same physical GPU under multiple node IDs to earn double credits.
-- **Detection:** NVIDIA GPU UUID is included in capability registration. Duplicate GPU UUIDs → second registration rejected.
-- **AMD/CPU nodes:** Use a hardware fingerprint hash (motherboard serial + CPU ID via `sysinfo`).
+- **Detection:** Hardware fingerprint is **required** for all node types. A GPU UUID alone is software-readable and can be spoofed by a malicious driver; binding it to the motherboard serial + CPU ID raises the attack cost significantly.
+  - **NVIDIA:** `SHA-256(gpu_uuid + motherboard_serial + cpu_id)` — all three fields required. Any single field mismatch → registration rejected.
+  - **AMD/CPU nodes:** `SHA-256(motherboard_serial + cpu_id)` via `sysinfo` crate.
+- Duplicate fingerprint hash → second registration rejected; operator alerted.
 
 ---
 
