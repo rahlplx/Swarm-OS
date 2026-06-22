@@ -18,6 +18,7 @@
 - **License: GPL-3.0 — CANNOT port code directly into Apache 2.0 codebase.**
 - **Integration Strategy (clean-room):** Use exo as a reference implementation and academic resource only. Implement ring topology and shard partitioning from scratch in Rust, based on the underlying algorithms (weighted memory partitioning is a standard technique described in published ML systems papers — it is not patentable or copyrightable as an idea). Alternatively, run exo as a separate subprocess and communicate over its REST API, keeping a clean process boundary that avoids creating a derivative work.
 - **Alternative MIT source:** `distilabel` and `llama.cpp`'s own `--split-mode` flag implement layer splitting under MIT; prefer these as code references.
+- **Do not confuse with b4rtaz/distributed-llama (MIT):** distributed-llama uses a STAR topology (one root node + N workers) and requires N = 2^k nodes. This is incompatible with our heterogeneous pool design which needs arbitrary node counts and proportional VRAM partitioning. We use exo's pipeline ring design, not distributed-llama's topology.
 
 #### 2. ggerganov/llama.cpp
 - **Repo:** https://github.com/ggerganov/llama.cpp
@@ -27,6 +28,7 @@
   - Splitting: `src/llama.cpp` tensor offloading across GPUs (adapt for cross-node)
 - **Rust Binding:** `utilityai/llama-rs` or `mdrokz/rust-llama.cpp`
 - **License:** MIT
+- **Known issue — Metal backend (Apple Silicon):** Long-context inference (>8k tokens) on Apple Metal/MPS has known stability issues (sporadic assertion failures / incorrect outputs) tracked in llama.cpp PR #21274. Mitigation: limit context window to 8192 tokens for Metal nodes in Phase 0–1; monitor upstream fixes before raising the limit. Metal nodes should not be assigned as the sole node for long-context jobs.
 
 #### 3. BerriAI/litellm
 - **Repo:** https://github.com/BerriAI/litellm
@@ -37,6 +39,7 @@
   - Usage tracking: `litellm/proxy/utils.py` log_success_event callback
   - OpenAI-compatible SSE streaming
 - **License:** MIT
+- **Integration caveat:** The `success_callback` / `log_success_event` hook for credit debiting is NOT a documented stable API — it is an internal utility callback that LiteLLM uses for its own logging integrations. We must implement this as a custom patch or subclass, not rely on it as a public interface. Monitor LiteLLM releases for breaking changes to this hook. Risk: HIGH (credit debiting is core economic functionality). Mitigation: pin LiteLLM version and own the callback shim in our codebase.
 
 #### 4. juanfont/headscale
 - **Repo:** https://github.com/juanfont/headscale
@@ -101,6 +104,7 @@
   - Native system tray, notifications
 - **Version:** Tauri v2 (stable as of 2024)
 - **License:** MIT / Apache-2.0
+- **Known issue — Windows MSVC build (tauri-apps/tauri#13638):** Tauri v2 has an intermittent build failure with MSVC toolchain on Windows when the Rust toolchain is not exactly the version Tauri's build scripts expect. Mitigation: pin the Rust toolchain version in `rust-toolchain.toml` and test Windows builds in CI from day one. Use `x86_64-pc-windows-msvc` target explicitly; do not rely on the default installed toolchain in GitHub Actions runners.
 
 #### 10. wireguard/wireguard-go
 - **Repo:** https://github.com/WireGuard/wireguard-go

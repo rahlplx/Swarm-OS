@@ -47,7 +47,7 @@
 │  │  3. Score eligible nodes: VRAM×4 + RAM×0.5 + CPU×0.25      │   │
 │  │     + backend_bonus (cuda=10/metal=8/vulkan=5/cpu=0)        │   │
 │  │     + locality_bonus (same ASN/city preferred)              │   │
-│  │  4. For large models: split into K shards (ring topology)   │   │
+│  │  4. For large models: split into K shards (pipeline ring)   │   │
 │  │  5. Assign shards to top-K scoring nodes                    │   │
 │  │  6. Write assignment to /jobs/{id}/shards in etcd           │   │
 │  └─────────────────────────────────────────────────────────────┘   │
@@ -126,9 +126,16 @@ Node failure:
      User-facing impact: up to 10s stall, then full re-generation from the beginning.
 
 No single coordinator. Any orchestrator instance watching etcd handles it.
+
+etcd watch caveat (etcd/etcd#19179): etcd can compact history and drop watch events
+  during compaction. If the Orchestrator's watch stream returns ErrCompacted, it must:
+    1. Fetch current state with a point-in-time Get (get all /swarm/nodes/* and /swarm/jobs/*)
+    2. Re-establish watch streams from the returned revision header
+  This re-watch logic is mandatory — missing a TTL expiry event means a dead node is
+  never cleaned up and its shards are never re-queued.
 ```
 
-**Source:** k3s embedded etcd patterns (`k3s-io/k3s/pkg/etcd/`) + etcd official watch API docs
+**Source:** k3s embedded etcd patterns (`k3s-io/k3s/pkg/etcd/`) + etcd official watch API docs + etcd/etcd#19179
 
 ---
 
@@ -184,7 +191,7 @@ Each participating device runs a Tauri v2 app. The Rust backend handles all comp
 
 ---
 
-## 4. Model Sharding — Exo Ring Topology
+## 4. Model Sharding — Pipeline Ring Topology
 
 For models exceeding a single node's VRAM (e.g., 70B model needs 40+ GB VRAM):
 
@@ -195,7 +202,7 @@ Node A (24GB VRAM) → layers 0–19   (50%)
 Node B (16GB VRAM) → layers 20–31  (30%)
 Node C (8GB VRAM)  → layers 32–39  (20%)
 
-Ring forward pass:
+Pipeline ring forward pass:
   Input Tokens
       │
       ▼
@@ -211,9 +218,14 @@ Ring forward pass:
   API Gateway → Client (SSE stream)
 ```
 
-**Source pattern:** `exo-labs/exo/exo/inference/mlx/models/` shard assignment + `exo/topology/ring_memory_weighted_partitioning.py`
+**Topology choice — pipeline ring (not STAR):**
+- exo-labs/exo uses weighted pipeline ring partitioning — arbitrary node counts, layers split proportionally by VRAM. This is our reference design.
+- b4rtaz/distributed-llama (MIT) uses a STAR topology (one root + N workers) and requires N = 2^k nodes, which would artificially constrain our heterogeneous pool. We studied distributed-llama but do not adopt its topology.
+- We implement ring partitioning from scratch in Rust (clean-room), since exo is GPL-3.0 and cannot be ported to our Apache-2.0 codebase. The partitioning algorithm (weighted memory split across pipeline stages) is a standard technique described in published ML systems papers and is not subject to copyright as an idea.
 
-**Key difference from Exo:** We use GGUF/llama.cpp instead of MLX, enabling cross-platform (Windows/Linux/Mac).
+**Source pattern (design reference only):** `exo-labs/exo/exo/topology/ring_memory_weighted_partitioning.py`
+
+**Key difference from Exo:** We use GGUF/llama.cpp instead of MLX, enabling cross-platform (Windows/Linux/Mac/CPU).
 
 ---
 
@@ -275,6 +287,21 @@ Prometheus Server (must be joined to the WireGuard mesh
 
 **Network requirement:** Prometheus must join the headscale mesh (register as a non-contributing node) so it can reach each node agent's WireGuard IP on port 9100. Nodes behind CGNAT are unreachable from the public internet — direct scrape only works via the mesh. No Pushgateway is needed; Pushgateway is for short-lived batch jobs, not long-running daemons.
 
+**Dynamic service discovery:** Node WireGuard IPs change as nodes join and leave; static Prometheus scrape_configs will not scale. Use Prometheus `file_sd_config`:
+- The Orchestrator watches etcd `/swarm/nodes/*/caps` and `/swarm/nodes/*/alive`.
+- On any node join or drop event, the Orchestrator rewrites `/etc/prometheus/targets/swarm_nodes.json` with the current list of WireGuard IPs + port 9100.
+- Prometheus `file_sd_config` polls this file every 30s and updates scrape targets automatically — no Prometheus restart required.
+- Alternative: `http_sd_config` pointing at a `/swarm/prometheus/targets` endpoint on the Orchestrator (same data, HTTP instead of file).
+
+```yaml
+# prometheus.yml
+scrape_configs:
+  - job_name: 'swarm_nodes'
+    file_sd_configs:
+      - files: ['/etc/prometheus/targets/swarm_nodes.json']
+        refresh_interval: 30s
+```
+
 ### Custom Metrics
 
 | Metric Name | Type | Description |
@@ -300,7 +327,7 @@ Prometheus Server (must be joined to the WireGuard mesh
 - Orchestrator verifies signatures before writing ledger
 
 ### API Key Security
-- Keys hashed (Argon2id, time=1, mem=64MB, parallelism=4, per-key random salt) at rest in etcd
+- Keys hashed (Argon2id, time=3, mem=64MB, parallelism=4, per-key random salt) at rest in etcd — OWASP 2025 minimum is time=3 (time=1 is insufficient against modern hardware)
 - Keys prefixed: `swrm_sk_` (consumer), `swrm_ops_` (operator), `swrm_adm_` (super admin), `swrm_node_` (inter-node)
 - Ed25519 signature chain for credits deduction log — each entry contains `SHA-256(prev_entry)` + node's Ed25519 signature; tamper-evident without a shared secret
 

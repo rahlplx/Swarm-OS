@@ -58,7 +58,7 @@
   </architecture_decisions>
 
   <security_decisions>
-    <decision id="S1">API key hashing: Argon2id, time=1, mem=64MB, parallelism=4, per-key random salt.</decision>
+    <decision id="S1">API key hashing: Argon2id, time=3, mem=64MB, parallelism=4, per-key random salt. (OWASP 2025 minimum: time=3)</decision>
     <decision id="S2">Ledger: Ed25519 signature per entry + SHA-256 hash chain. ADMIN_ADJUST entries in separate admin_adjustments SQLite table — NOT in the hash chain. Chain traversal is always contiguous.</decision>
     <decision id="S3">Key prefixes: swrm_sk_ (consumer), swrm_ops_ (operator), swrm_adm_ (super admin), swrm_node_ (inter-node contributor).</decision>
     <decision id="S4">Node auth: Ed25519 keypair generated on first run; public key registered in Blackboard at join. All ledger entries signed by node private key.</decision>

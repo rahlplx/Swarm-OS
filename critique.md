@@ -116,7 +116,7 @@ Raw prompt messages are stored in etcd, readable by all node operators. The "pro
 
 SHA-256 is a fast hash. For user-generated or low-entropy keys, it is rainbow-table vulnerable.
 
-**Fix:** `argon2id(key, salt, time=1, mem=64MB, parallelism=4)` with a per-key random 32-byte salt stored alongside the hash in etcd.
+**Fix:** `argon2id(key, salt, time=3, mem=64MB, parallelism=4)` with a per-key random 32-byte salt stored alongside the hash in etcd. (OWASP 2025 minimum is time=3; time=1 is insufficient.)
 
 ### HIGH — Ledger Replay Attack
 
