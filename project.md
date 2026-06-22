@@ -48,7 +48,9 @@
 
 ### F1: Heterogeneous Resource Pooling
 - Auto-detect CPU cores, RAM, VRAM, GPU model via `sysinfo` + `nvml` Rust crates
-- Capability Scoring: `score = (vram_gb × 4) + (ram_gb × 0.5) + (cpu_cores × 0.25) + backend_bonus`
+- **Scheduling is two-phase:**
+  1. **Pre-filter (hard gates):** exclude nodes where `free_vram_gb < shard_min_vram` OR `free_ram_gb < shard_min_ram` OR backend incompatible with model format. A high-RAM CPU node must never receive a GPU-required shard.
+  2. **Score eligible nodes:** `score = (vram_gb × 4) + (ram_gb × 0.5) + (cpu_cores × 0.25) + backend_bonus + locality_bonus`
 - Support: NVIDIA CUDA, AMD ROCm, Apple Metal/MPS, CPU-only (via llama.cpp backends)
 - **Stolen from:** GPUStack worker profiler (`gpustack/gpustack/worker/`)
 

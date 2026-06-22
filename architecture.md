@@ -39,10 +39,16 @@
 │  │                  SCHEDULER / ROUTER                         │   │
 │  │                                                             │   │
 │  │  1. Read node capabilities from Blackboard                  │   │
-│  │  2. Score nodes: VRAM×4 + RAM×0.5 + CPU×0.25 + locality    │   │
-│  │  3. For large models: split into K shards (Exo ring)        │   │
-│  │  4. Assign shards to top-K scoring nodes                    │   │
-│  │  5. Write assignment to /jobs/{id}/shards in etcd           │   │
+│  │  2. PRE-FILTER (hard gates — exclude before scoring):       │   │
+│  │     - free_vram_gb < shard_min_vram  → exclude              │   │
+│  │     - free_ram_gb  < shard_min_ram   → exclude              │   │
+│  │     - backend incompatible with model → exclude             │   │
+│  │     - node alive TTL expired         → exclude              │   │
+│  │  3. Score eligible nodes: VRAM×4 + RAM×0.5 + CPU×0.25      │   │
+│  │     + locality_bonus (same ASN/city preferred)              │   │
+│  │  4. For large models: split into K shards (ring topology)   │   │
+│  │  5. Assign shards to top-K scoring nodes                    │   │
+│  │  6. Write assignment to /jobs/{id}/shards in etcd           │   │
 │  └─────────────────────────────────────────────────────────────┘   │
 └──────────────────────────────────┬─────────────────────────────────┘
                                    │
@@ -93,6 +99,8 @@ The Blackboard is a coordination pattern from classic distributed AI: agents sha
   config/
     scheduler/      → scheduling policy overrides
     rate_limits/    → per-tier API limits
+    keys/
+      {key_hash}    → {"credits": 120.50, "tier": "standard", "owner": "user@example.com"}
 ```
 
 ### Node Churn Handling
@@ -109,7 +117,8 @@ Node failure:
   5. Scheduler reads /jobs/{id}/shards → finds shards on dead node
   6. Scheduler marks those shards "failed"
   7. Scheduler re-assigns to next best available node
-  8. Job resumes from last checkpoint (KV cache saved on Blackboard)
+  8. Job resumes from last checkpoint (KV cache stored locally on node disk;
+     etcd holds only the pointer: /swarm/jobs/{id}/kvcache_ref → {"node_id": "...", "path": "/tmp/swarm/kv/{id}.bin"})
 
 No single coordinator. Any orchestrator instance watching etcd handles it.
 ```
@@ -147,7 +156,8 @@ Each participating device runs a Tauri v2 app. The Rust backend handles all comp
 │  │  llama-cpp-rs bindings (or llama-rs)                        │  │
 │  │  Backend auto-select: CUDA → Metal → Vulkan → CPU           │  │
 │  │  GGUF model loading from ~/.swarm-os/models/                 │  │
-│  │  KV cache management for shard resume                        │  │
+│  │  KV cache written to local disk (/tmp/swarm/kv/); pointer    │  │
+│  │  registered in etcd — never stored in etcd directly          │  │
 │  └───────────────────────────┬─────────────────────────────────┘  │
 │                              │                                     │
 │  ┌───────────────────────────▼─────────────────────────────────┐  │
@@ -282,7 +292,7 @@ Prometheus Server
 ### API Key Security
 - Keys hashed (SHA-256) at rest in etcd
 - Keys prefixed: `swrm_sk_` (user), `swrm_adm_` (admin), `swrm_node_` (inter-node)
-- HMAC-signed credits deduction log — tamper-evident chain
+- Ed25519 signature chain for credits deduction log — each entry contains `SHA-256(prev_entry)` + node's Ed25519 signature; tamper-evident without a shared secret
 
 ### Network Security
 - All inter-node traffic: WireGuard (ChaCha20-Poly1305)
@@ -305,6 +315,6 @@ Prometheus Server
 | Orchestrator crash | etcd leader election | Standby takes over | etcd Raft |
 | Network partition | DERP relay fallback | Route via relay | Tailscale DERP |
 | Model download fail | Checksum verify | Retry + alternate mirror | GPUStack model mgr |
-| Ledger corruption | HMAC chain break | Alert + audit rollback | Bitcoin chain concept |
+| Ledger corruption | Ed25519 signature chain break (hash mismatch) | Alert + audit rollback from last valid entry | Bitcoin chain concept |
 | Credit exhaustion | Pre-flight credit check | 402 response, notify user | LiteLLM budget mgr |
 | Queue overflow | Depth metric alert | Reject with 503 + retry-after | LiteLLM rate limiter |

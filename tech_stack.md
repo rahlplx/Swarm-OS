@@ -10,13 +10,14 @@
 
 #### 1. exo-labs/exo
 - **Repo:** https://github.com/exo-labs/exo
-- **What We Steal:**
+- **What We Study (NOT copy):**
   - Ring topology model sharding: `exo/topology/ring_memory_weighted_partitioning.py`
   - P2P node discovery: `exo/networking/udp_discovery.py`
   - Shard inference protocol: `exo/inference/shard_inference_engine.py`
   - Device capability detection: `exo/helpers.py` (memory profiling)
-- **How We Adapt:** Port the topology and sharding logic to Rust; replace MLX with llama.cpp GGUF backend for cross-platform support (Exo is Apple-only)
-- **License:** GPL-3.0
+- **License: GPL-3.0 — CANNOT port code directly into Apache 2.0 codebase.**
+- **Integration Strategy (clean-room):** Use exo as a reference implementation and academic resource only. Implement ring topology and shard partitioning from scratch in Rust, based on the underlying algorithms (weighted memory partitioning is a standard technique described in published ML systems papers — it is not patentable or copyrightable as an idea). Alternatively, run exo as a separate subprocess and communicate over its REST API, keeping a clean process boundary that avoids creating a derivative work.
+- **Alternative MIT source:** `distilabel` and `llama.cpp`'s own `--split-mode` flag implement layer splitting under MIT; prefer these as code references.
 
 #### 2. ggerganov/llama.cpp
 - **Repo:** https://github.com/ggerganov/llama.cpp
@@ -141,10 +142,11 @@
 ### Tier 4 — BD-Specific
 
 #### 16. SSLCommerz (Payment Gateway)
-- **Repo:** https://github.com/sslcommerz/SSLCommerz-Python (adapt to Next.js)
+- **API Docs:** https://developer.sslcommerz.com/doc/v4/
 - **Role:** BDT credit purchases (bKash, Nagad, Visa, MasterCard)
-- **Integration:** Admin portal checkout → SSLCommerz → webhook → credit top-up in etcd
-- **License:** Proprietary SDK (free to use)
+- **Integration:** Call SSLCommerz REST API directly from Next.js API routes using `fetch`/`axios` — do NOT use the Python SDK. The Python SDK (`SSLCommerz-Python`) cannot be imported into TypeScript/JavaScript. Community Node.js wrapper: `sslcommerz-lts` (npm) provides a typed JS interface if preferred.
+- **Flow:** Admin portal → Next.js API route (`/api/payment/initiate`) → SSLCommerz REST → redirect to payment page → SSLCommerz webhook POST → Next.js API route (`/api/payment/callback`) → credit top-up in etcd
+- **License:** Proprietary API (free to use)
 
 #### 17. i18next/react-i18next
 - **Repo:** https://github.com/i18next/react-i18next
