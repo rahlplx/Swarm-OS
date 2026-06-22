@@ -1,3 +1,24 @@
+---
+type: spec
+title: UI/UX Specification
+description: Design system, web portal screens, Tauri tray agent, Grafana dashboards, accessibility
+tags: [ui, technical, contributor, consumer, operator, bangladesh]
+timestamp: "2026-06-22"
+status: active
+phase: "0-4"
+authority:
+  - design_system
+  - web_portal_screens
+  - tauri_agent_screens
+  - grafana_dashboards
+  - accessibility_rules
+  - onboarding_flow
+depends_on:
+  - /project
+  - /governance
+token_estimate: 7500
+---
+
 # Swarm-OS: UI/UX Specification
 
 > Design principle: **Progressive disclosure.** A new contributor joins in under 3 minutes. An advanced operator can configure every scheduler knob. Neither should see what the other doesn't need.

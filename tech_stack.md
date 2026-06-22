@@ -1,3 +1,22 @@
+---
+type: reference
+title: Technology Stack
+description: OSS dependencies with licenses, dependency map, model support matrix, build toolchain
+tags: [architecture, reference, technical]
+timestamp: "2026-06-22"
+status: active
+phase: "0-4"
+authority:
+  - oss_dependencies
+  - dependency_map
+  - model_support_matrix
+  - build_toolchain
+  - license_constraints
+depends_on:
+  - /architecture
+token_estimate: 4300
+---
+
 # Swarm-OS: Tech Stack
 
 > Rule: **Steal like an artist.** Every component is sourced from a production-grade OSS repo. No custom distributed systems primitives. Links + specific files cited for every component.
@@ -16,7 +35,7 @@ These projects are **not dependencies** — they are the competitive and academi
 - **What It Does:** BitTorrent-style distributed inference — users load a few transformer layers each, the network chains them to process prompts. The closest academic precedent to what we are building.
 - **Key Learnings to Extract:**
   - **Inter-node latency is the #1 bottleneck, not GPU compute** (confirmed in their paper). Our 8s P95 SLA must account for BD ISP latency, not just VRAM speed.
-  - Activation tensor sizes for 70B models: ~2MB per layer boundary per token = 16 Megabits. At 50 Mbps (typical BD broadband), 16 Mb ÷ 50 Mbps = **320 ms/hop**. 3 WAN hops = **~960 ms/token** — ~1 token/sec ceiling. **Not manageable on WAN.** Phase 2 must target LAN topology (≥1 Gbps → 16 ms/hop × 3 = 48 ms/token). Cross-city WAN sharding requires int8 activation quantization (→ 80 ms/hop) and is a Phase 3+ research item.
+  - Activation tensor analysis: see [architecture.md §4](./architecture.md) for corrected sizes (16 KiB decode, 32 MiB prefill) and WAN viability tables.
   - They use HTTP long-polling between nodes. We use WireGuard direct P2P — lower latency, more complexity.
   - Their failure recovery: prompt re-sent from scratch if any node drops (same as our design — no checkpoint resume).
 - **Study:** `petals/src/server/`, `petals/src/client/routing/`, `petals/tests/test_server.py`
@@ -50,6 +69,7 @@ These projects are **not dependencies** — they are the competitive and academi
   - Magnet links are the distribution primitive — Mistral released Mixtral 8x7B this way; millions downloaded without CDN cost.
   - We can seed official Swarm-OS model bundles (curated GGUF + metadata JSON) as torrents. Any contributor who has the model auto-seeds to new joiners.
 - **Study:** Torrent file structure, announce tracker config, DHT behaviour for large binary files.
+- **Research verdict: ADAPT.** Use BitTorrent's chunked verification model for GGUF distribution, but replace SHA-1 hashes with BLAKE3 content hashing (2750 MB/s vs 340 MB/s for SHA-256 on a 4 GiB GGUF).
 
 #### E. n0-computer/iroh
 - **Repo:** https://github.com/n0-computer/iroh
@@ -60,6 +80,7 @@ These projects are **not dependencies** — they are the competitive and academi
   - **Decision:** Use BLAKE3 for model file integrity verification in Phase 4. Keep SHA-256 for the ledger chain (established security model, no reason to change).
   - Iroh's QUIC transport outperforms TCP BitTorrent for high-latency connections (relevant for BD mobile nodes).
 - **Study:** `iroh/iroh-blobs/` for chunked file transfer; `iroh/iroh-net/` for QUIC P2P.
+- **Research verdict: ADOPT** as primary model distribution backend for Swarm-OS. QUIC transport outperforms TCP BitTorrent for high-latency BD connections; automatic transfer resume on reconnect.
 
 #### F. Industry Pattern — Magnet Link Release
 - Mistral AI released Mixtral 8x7B (47GB) via a raw magnet link tweet. Zero CDN cost. Thousands of peers seeded it instantly.
@@ -82,7 +103,7 @@ These projects are **not dependencies** — they are the competitive and academi
 - **License: GPL-3.0 — CANNOT port code directly into Apache 2.0 codebase.**
 - **Integration Strategy (clean-room):** Use exo as a reference implementation and academic resource only. Implement ring topology and shard partitioning from scratch in Rust, based on the underlying algorithms (weighted memory partitioning is a standard technique described in published ML systems papers — it is not patentable or copyrightable as an idea). Alternatively, run exo as a separate subprocess and communicate over its REST API, keeping a clean process boundary that avoids creating a derivative work.
 - **Alternative MIT source:** `distilabel` and `llama.cpp`'s own `--split-mode` flag implement layer splitting under MIT; prefer these as code references.
-- **Do not confuse with b4rtaz/distributed-llama (MIT):** distributed-llama uses a STAR topology (one root node + N workers) and requires N = 2^k nodes. This is incompatible with our heterogeneous pool design which needs arbitrary node counts and proportional VRAM partitioning. We use exo's pipeline ring design, not distributed-llama's topology.
+- **distributed-llama: AVOID.** See [architecture.md §4](./architecture.md) for the topology comparison table (pipeline ring vs STAR vs chain) and why distributed-llama's matrix-parallel approach is unsuitable.
 
 #### 2. ggerganov/llama.cpp
 - **Repo:** https://github.com/ggerganov/llama.cpp
@@ -90,7 +111,7 @@ These projects are **not dependencies** — they are the competitive and academi
   - The entire inference engine — GGUF model format, CUDA/Metal/CPU backends
   - Server mode: `examples/server/server.cpp` (OpenAI-compatible REST server per node)
   - Splitting: `src/llama.cpp` tensor offloading across GPUs (adapt for cross-node)
-- **Rust Binding:** `utilityai/llama-rs` or `mdrokz/rust-llama.cpp`
+- **Rust Binding:** `utilityai/llama-cpp-2` (tracks modern GGUF format; `rustformers/llama-rs` is archived and unsuitable)
 - **License:** MIT
 - **Known issue — Metal backend (Apple Silicon):** Long-context inference (>8k tokens) on Apple Metal/MPS has known stability issues (sporadic assertion failures / incorrect outputs) tracked in llama.cpp PR #21274. Mitigation: limit context window to 8192 tokens for Metal nodes in Phase 0–1; monitor upstream fixes before raising the limit. Metal nodes should not be assigned as the sole node for long-context jobs.
 
@@ -103,7 +124,7 @@ These projects are **not dependencies** — they are the competitive and academi
   - Usage tracking: `litellm/proxy/utils.py` log_success_event callback
   - OpenAI-compatible SSE streaming
 - **License:** MIT
-- **Integration caveat:** The `success_callback` / `log_success_event` hook for credit debiting is NOT a documented stable API — it is an internal utility callback that LiteLLM uses for its own logging integrations. We must implement this as a custom patch or subclass, not rely on it as a public interface. Monitor LiteLLM releases for breaking changes to this hook. Risk: HIGH (credit debiting is core economic functionality). Mitigation: pin LiteLLM version and own the callback shim in our codebase.
+- **Integration risk (HIGH):** `success_callback` / `CustomLogger` hooks are internal APIs, not stable. Pin to >=1.82.0. Own the callback shim in our codebase. Monitor releases for breaking changes.
 
 #### 4. juanfont/headscale
 - **Repo:** https://github.com/juanfont/headscale
@@ -236,7 +257,7 @@ Swarm-OS
 ├── Node Agent (Rust/Tauri)
 │   ├── tauri v2 (app shell)
 │   ├── tokio (async runtime)
-│   ├── llama-cpp-rs (inference)
+│   ├── llama-cpp-2 (inference via utilityai/llama-cpp-rs)
 │   ├── etcd-client (blackboard)
 │   ├── reqwest (HTTP)
 │   ├── sysinfo (resource profiling)
@@ -248,7 +269,7 @@ Swarm-OS
 │   ├── etcd v3 (blackboard state)
 │   ├── tonic (gRPC server)
 │   ├── tokio (async)
-│   └── exo topology logic (ported)
+│   └── ring topology logic (clean-room Rust)
 │
 ├── API Gateway (Python)
 │   ├── litellm proxy

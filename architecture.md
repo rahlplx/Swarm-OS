@@ -1,3 +1,25 @@
+---
+type: spec
+title: System Architecture
+description: System layers, Blackboard coordination, scheduler/router, pipeline ring sharding, API gateway, observability, security, failure modes
+tags: [architecture, security, networking, inference, scheduling, observability, technical]
+timestamp: "2026-06-22"
+status: active
+phase: "0-4"
+authority:
+  - system_layers
+  - blackboard_keyspace
+  - scheduler_algorithm
+  - pipeline_ring_topology
+  - activation_tensor_sizes
+  - api_gateway_flow
+  - observability_architecture
+  - security_model
+  - failure_modes
+depends_on: []
+token_estimate: 5600
+---
+
 # Swarm-OS: Architecture
 
 > Design principle: **No custom distributed systems code.** Every coordination primitive is stolen from a battle-tested OSS project. We assemble; we don't invent.
@@ -108,32 +130,22 @@ The Blackboard is a coordination pattern from classic distributed AI: agents sha
 
 ### Node Churn Handling
 
-```
-Normal operation:
-  Node Agent → writes /swarm/nodes/{id}/alive with TTL=10s every 5s
+Normal operation: Node Agent writes `/swarm/nodes/{id}/alive` with TTL=10s every 5s.
 
-Node failure:
-  1. Heartbeat stops
-  2. etcd TTL expires after 10s
-  3. etcd fires WATCH event: key deleted
-  4. Scheduler receives event via etcd Watch stream
-  5. Scheduler reads /jobs/{id}/shards → finds shards on dead node
-  6. Scheduler marks those shards "failed"
-  7. Scheduler re-assigns to next best available node
-  8. Job RESTARTS from token 0 on the new node — NOT a checkpoint resume.
-     The dead node's KV cache (/tmp/swarm/kv/{id}.bin) is unreachable.
-     The etcd pointer /swarm/jobs/{id}/kvcache_ref is cleared.
-     User-facing impact: up to 10s stall, then full re-generation from the beginning.
+| Step | Event | Action |
+|------|-------|--------|
+| 0 | Normal | Node writes `/alive` TTL=10s every 5s |
+| 1 | Heartbeat stops | No action yet |
+| 2 | 10s passes | etcd TTL expires, fires WATCH DELETE event |
+| 3 | Scheduler receives event | Reads `/jobs/{id}/shards`, finds shards on dead node |
+| 4 | Re-assignment | Marks dead shards "failed", assigns to next-best node |
+| 5 | Restart | Job restarts from token 0 — dead node's KV cache unreachable, etcd pointer cleared. User sees up to 10s stall then full re-generation |
 
 No single coordinator. Any orchestrator instance watching etcd handles it.
 
-etcd watch caveat (etcd/etcd#19179): etcd can compact history and drop watch events
-  during compaction. If the Orchestrator's watch stream returns ErrCompacted, it must:
-    1. Fetch current state with a point-in-time Get (get all /swarm/nodes/* and /swarm/jobs/*)
-    2. Re-establish watch streams from the returned revision header
-  This re-watch logic is mandatory — missing a TTL expiry event means a dead node is
-  never cleaned up and its shards are never re-queued.
-```
+**Alternative studied (Petals):** DHT-based re-routing where the client caches activations locally and reroutes to an alternative block host, resuming from the failed boundary. Phase 2+ adaptation target — requires client-side activation caching.
+
+**etcd watch caveat** (etcd/etcd#19179): Compaction can drop watch events. On `ErrCompacted`, the Orchestrator must: (1) fetch current state with point-in-time Get, (2) re-establish watch from returned revision. Missing a TTL expiry means a dead node is never cleaned up.
 
 **Source:** k3s embedded etcd patterns (`k3s-io/k3s/pkg/etcd/`) + etcd official watch API docs + etcd/etcd#19179
 
@@ -221,14 +233,33 @@ Pipeline ring forward pass:
 ```
 
 **Topology choice — pipeline ring (not STAR):**
-- exo-labs/exo uses weighted pipeline ring partitioning — arbitrary node counts, layers split proportionally by VRAM. This is our reference design.
-- b4rtaz/distributed-llama (MIT) uses a STAR topology (one root + N workers) and requires N = 2^k nodes, which would artificially constrain our heterogeneous pool. We studied distributed-llama but do not adopt its topology.
-- bigscience-workshop/petals (MIT) validates this pipeline approach at production scale: their published findings confirm inter-node latency — not GPU compute — is the dominant bottleneck. Activation tensor sizes for 70B models are ~2MB per layer boundary per token = 16 Megabits. At 50 Mbps BD broadband, each inter-node hop costs 16 Mb ÷ 50 Mbps = **320 ms/token**. Three WAN hops = ~960 ms overhead per token — ~1 token/sec throughput ceiling, which violates production UX even if TTFT stays under 8s.
-  **Architectural constraint for Phase 2:** Cross-WAN sharding of 70B models requires one of:
-    (a) LAN topology (≥1 Gbps): 16 Mb ÷ 1000 Mbps = 16 ms/hop × 3 = 48 ms/token — acceptable.
-    (b) int8 activation quantization (fp32 → int8, 4× smaller = ~0.5 MB/hop): 4 Mb ÷ 50 Mbps = 80 ms × 3 = 240 ms/token — ~4 tokens/sec. Borderline but usable.
-  Phase 2 target is campus/lab nodes on LAN. WAN cross-city sharding with acceptable throughput is a Phase 3+ research item requiring int8 quant.
-- We implement ring partitioning from scratch in Rust (clean-room), since exo is GPL-3.0 and cannot be ported to our Apache-2.0 codebase. The partitioning algorithm (weighted memory split across pipeline stages) is a standard technique described in published ML systems papers and is not subject to copyright as an idea.
+
+| Reference | License | Topology | Adopted? | Reason |
+|-----------|---------|----------|----------|--------|
+| exo-labs/exo | GPL-3.0 | Pipeline ring | Study only | GPL incompatible; clean-room Rust impl required |
+| b4rtaz/distributed-llama | MIT | STAR (matrix-parallel) | AVOID | 2^k node constraint, .bin format, 972ms/fwd on WAN |
+| bigscience-workshop/petals | MIT | Pipeline chain | Study | DHT re-routing for Phase 2+ fault tolerance |
+
+We implement ring partitioning from scratch in Rust (clean-room), since exo is GPL-3.0. The algorithm (weighted memory split across pipeline stages) is a standard technique in published ML systems papers.
+
+### Activation Tensor Size (70B, hidden_dim=8192, fp16)
+
+Formula: `Size = seq_len x hidden_dim x 2 bytes`
+
+| Phase | seq_len | Size/hop | Time @ 50 Mbps (BD) | Time @ 1 Gbps (LAN) |
+|-------|---------|----------|----------------------|----------------------|
+| Decode | 1 | 16 KiB | 2.6 ms | negligible |
+| Prefill | 2048 | 32 MiB | 5.12 s | 256 ms |
+
+3 WAN hops at 50 Mbps = 15.4s prefill (exceeds 8s TTFT budget). LAN (>=1 Gbps): 768ms — acceptable.
+
+**Phase 2 WAN mitigation options:**
+
+| Option | Mechanism | Prefill overhead (3 hops) | Status |
+|--------|-----------|---------------------------|--------|
+| (a) LAN topology | >=1 Gbps campus/lab | 768 ms | Phase 2 target |
+| (b) int8 activation quant | fp16 -> int8, 2x smaller | 7.7 s (borderline) | Phase 3+ |
+| (c) Chunked prefill | Split seq_len into micro-batches | Varies | Phase 3+ |
 
 **Source pattern (design reference only):** `exo-labs/exo/exo/topology/ring_memory_weighted_partitioning.py`
 
@@ -270,7 +301,7 @@ Post-completion hook (LiteLLM success callback):
   - Write ledger delta for each contributing node
 ```
 
-**Source:** `BerriAI/litellm/litellm/proxy/` — proxy_server.py, router.py, custom_provider pattern
+**Source:** `BerriAI/litellm/litellm/proxy/` — proxy_server.py, router.py, custom_provider pattern. See [tech_stack.md](./tech_stack.md) for LiteLLM version pinning and integration caveats.
 
 ---
 
@@ -294,11 +325,7 @@ Prometheus Server (must be joined to the WireGuard mesh
 
 **Network requirement:** Prometheus must join the headscale mesh (register as a non-contributing node) so it can reach each node agent's WireGuard IP on port 9100. Nodes behind CGNAT are unreachable from the public internet — direct scrape only works via the mesh. No Pushgateway is needed; Pushgateway is for short-lived batch jobs, not long-running daemons.
 
-**Dynamic service discovery:** Node WireGuard IPs change as nodes join and leave; static Prometheus scrape_configs will not scale. Use Prometheus `file_sd_config`:
-- The Orchestrator watches etcd `/swarm/nodes/*/caps` and `/swarm/nodes/*/alive`.
-- On any node join or drop event, the Orchestrator rewrites `/etc/prometheus/targets/swarm_nodes.json` with the current list of WireGuard IPs + port 9100.
-- Prometheus `file_sd_config` polls this file every 30s and updates scrape targets automatically — no Prometheus restart required.
-- Alternative: `http_sd_config` pointing at a `/swarm/prometheus/targets` endpoint on the Orchestrator (same data, HTTP instead of file).
+**Dynamic service discovery:** Static `scrape_configs` won't scale — WireGuard IPs change as nodes join/leave. Use `file_sd_config`: Orchestrator watches etcd `/swarm/nodes/*`, rewrites `/etc/prometheus/targets/swarm_nodes.json` on join/drop, Prometheus polls every 30s. Alternative: `http_sd_config` via Orchestrator endpoint.
 
 ```yaml
 # prometheus.yml
@@ -348,6 +375,8 @@ scrape_configs:
 - Inference runs in a sandboxed subprocess (seccomp on Linux, App Sandbox on macOS)
 - No node can read another node's model weights or KV cache directly
 - Jobs are ephemeral: all state cleared after completion
+
+Scheduler policy config schema: [governance.md §3.1](./governance.md). Threat analysis: [critique.md Domain 2](./critique.md).
 
 ---
 

@@ -1,3 +1,24 @@
+---
+type: review
+title: Full-Team Critique Report
+description: 28 issues severity-ranked across architecture, security, product, market, and business domains
+tags: [architecture, security, planning, bangladesh, review]
+timestamp: "2026-06-22"
+status: active
+phase: "0-4"
+authority:
+  - critique_issues
+  - bd_network_reality
+  - competitive_analysis
+  - gtm_strategy
+  - revenue_model
+depends_on:
+  - /architecture
+  - /governance
+  - /project
+token_estimate: 5700
+---
+
 # Swarm-OS: Full-Team Critique Report
 
 > **Team:** Architecture & Infrastructure · Market Research · Product & UX · Business & GTM · Security & Compliance  
@@ -45,15 +66,19 @@
 
 ### BLOCKER — Cross-Node llama.cpp Sharding Does Not Exist
 
-This is the product's central value proposition and it has no implementation. `llama.cpp --split-mode` works across GPUs on a single machine via PCIe — not across network nodes. Streaming hidden-state activation tensors (for Llama-3 70B at fp16: **~8MB per forward pass** at seq_len=512, hidden_dim=8192) over WireGuard requires custom serialization, transfer, and deserialization logic.
+**Status: RESOLVED** — see [architecture.md §4](./architecture.md) for the clean-room Rust pipeline-parallel design with activation tensor sizing tables.
 
-**Fix:** Replace "Exo ring topology" as the primary reference with **`b4rtaz/distributed-llama`** (MIT license, implements exactly this in C++ with TCP socket transport for GGUF models). This is the correct OSS steal, not exo-labs/exo (GPL-3.0, MLX-only, Apple-only). Add to Phase 0 scope: prototype activation tensor transfer between 2 nodes using distributed-llama as the inference core.
+This is the product's central value proposition and it has no implementation. `llama.cpp --split-mode` works across GPUs on a single machine via PCIe — not across network nodes.
+
+**Fix:** Clean-room Rust pipeline-parallel implementation. Study exo ring partitioning + Petals fault-tolerant block routing as design references.
 
 ### BLOCKER — Ledger Corrupts Under etcd Auto-Compaction
 
-etcd's `--auto-compaction-retention` permanently deletes old revisions. Your `SHA-256(prev_entry)` hash chain links are etcd revision-based. When a revision is compacted, the chain is unverifiable — not alertable, just silently broken.
+**Status: RESOLVED** — ledger moved to SQLite WAL. See [governance.md §4.1](./governance.md) for the canonical ledger entry format and [architecture.md §2](./architecture.md) for the etcd pointer design.
 
-**Fix:** Move the ledger out of etcd entirely. Use **SQLite in WAL mode** on the orchestrator with an append-only table and an immutable trigger. Store only the current chain head hash in etcd as a pointer. SQLite WAL is a battle-tested, boring solution — that's correct here.
+etcd's `--auto-compaction-retention` permanently deletes old revisions. Hash chain links are etcd revision-based — compaction silently breaks the chain.
+
+**Fix:** SQLite WAL on orchestrator with append-only table. etcd holds only `/swarm/ledger/{node_id}/head_hash` pointer.
 
 ### CRITICAL — BD DERP Relay: 70B Sharding Over Mobile Is Physically Impossible
 
@@ -71,7 +96,7 @@ The spec says "job resumes from last checkpoint." If Node B dies, its KV cache f
 
 | Replace/Add | With | Reason |
 |-------------|------|--------|
-| Exo (GPL, Apple-only) | **b4rtaz/distributed-llama** (MIT, cross-platform, TCP-native) | Actual cross-node llama.cpp sharding |
+| Exo (GPL, Apple-only) | **Clean-room Rust pipeline-parallel** (study exo ring algorithm + Petals block routing) | distributed-llama AVOID: matrix-parallel, 2^k nodes, .bin format, WAN-hostile |
 | etcd for metrics/heartbeats | **NATS JetStream** (JetStream KV for watch semantics) | 10M msgs/sec vs etcd's 1–2k/sec; reserve etcd for job assignments only |
 | Custom scheduler | **Ray Serve** (optional, Phase 3) | Battle-tested heterogeneous cluster scheduling |
 | Petals pattern reference | Add **Petals (LAION/BigScience)** as architectural reference | BitTorrent-style weight sharding is more resilient to node failure than ring topology |
@@ -102,21 +127,27 @@ No backpressure when 70B jobs queue behind 7B jobs that could run immediately. N
 
 ### BLOCKER — API Key in etcd Job Payload
 
-`/swarm/jobs/{id}/request → {model, messages, api_key}` — the consumer's live API key is written to the shared Blackboard and is readable by every node agent with etcd access. Zero exploitation required.
+**Status: RESOLVED** — see [architecture.md §7](./architecture.md). Job payloads now use one-time job tokens with 60s TTL; API keys never enter etcd.
 
-**Fix (P0):** Strip the API key from the job payload entirely. Replace with a **one-time job authorization token** scoped to that specific job ID with a 60-second TTL. The node proves assignment via job token, not the user's permanent API key.
+`/swarm/jobs/{id}/request → {model, messages, api_key}` — the consumer's live API key was written to shared Blackboard, readable by every node agent.
+
+**Fix (P0):** One-time job authorization token scoped to job ID with 60s TTL.
 
 ### CRITICAL — Prompt Data in etcd
 
-Raw prompt messages are stored in etcd, readable by all node operators. The "prompts never logged to disk" claim is a policy statement on untrusted hardware — it is unenforceable without TEE (Trusted Execution Environment).
+**Status: RESOLVED** — see [architecture.md §2](./architecture.md). Job objects now contain only routing metadata; prompts delivered P2P over WireGuard.
 
-**Fix (P1):** Remove prompts from etcd. Job objects in the Blackboard should contain only routing metadata (model ID, token budget, shard assignment). Prompts are transmitted directly over WireGuard to assigned nodes only, never written to shared state.
+Raw prompt messages were stored in etcd, readable by all node operators.
+
+**Fix (P1):** Prompts transmitted directly over WireGuard to assigned nodes only, never written to shared state.
 
 ### CRITICAL — SHA-256 for API Key Storage → Argon2id
 
-SHA-256 is a fast hash. For user-generated or low-entropy keys, it is rainbow-table vulnerable.
+**Status: RESOLVED** — see [architecture.md §7](./architecture.md). Now using Argon2id (time=3, mem=64MB, parallelism=4, per-key salt).
 
-**Fix:** `argon2id(key, salt, time=3, mem=64MB, parallelism=4)` with a per-key random 32-byte salt stored alongside the hash in etcd. (OWASP 2025 minimum is time=3; time=1 is insufficient.)
+SHA-256 is a fast hash — rainbow-table vulnerable for user-generated keys.
+
+**Fix:** `argon2id(key, salt, time=3, mem=64MB, parallelism=4)` per OWASP 2025 minimum.
 
 ### HIGH — Ledger Replay Attack
 
@@ -302,7 +333,7 @@ No US cloud provider will build this bundle for Bangladesh. This is the wedge. E
 
 ### Fix Before Writing Any Code (Pre-Phase 0)
 
-1. Replace exo/llama.cpp sharding with `distributed-llama` — prototype activation transfer
+1. Design clean-room Rust pipeline-parallel sharding (study exo ring partitioning + Petals fault tolerance) — prototype activation transfer
 2. Remove API key from etcd job payload → one-time job token
 3. Move ledger to SQLite WAL — remove from etcd
 4. Argon2id for API key hashing

@@ -1,3 +1,27 @@
+---
+type: spec
+title: Governance & Operations
+description: Role hierarchy, admin portal, config schemas, ledger audit protocol, abuse prevention, compliance
+tags: [governance, security, ledger, operator, technical]
+timestamp: "2026-06-22"
+status: active
+phase: "1-4"
+authority:
+  - role_hierarchy
+  - key_prefixes
+  - admin_portal_screens
+  - config_schemas
+  - credit_formula
+  - ledger_format
+  - ledger_audit_protocol
+  - abuse_prevention
+  - hardware_fingerprint
+  - compliance_requirements
+depends_on:
+  - /architecture
+token_estimate: 4900
+---
+
 # Swarm-OS: Governance
 
 > The swarm is a commons. Governance defines who controls what, how abuse is prevented, how the ledger stays honest, and how operators can configure behavior without touching code.
@@ -315,9 +339,8 @@ LedgerEntry {
 
 **Tamper-evidence:** Changing any field in entry N invalidates `prev_entry_hash` in entry N+1, breaking the chain. Verification requires the node's public key (registered in Blackboard at join time).
 
-**ADMIN_ADJUST storage:** Manual credit adjustments are stored in a **separate** `admin_adjustments` table in SQLite, NOT interleaved in the node's hash chain. They reference `node_id`, `job_id`, and `operator_key_id` but do not appear as entries in the hash chain sequence. This means `prev_entry_hash` in a regular entry always points to the previous regular entry; no entries are ever "skipped" during chain traversal.
+**ADMIN_ADJUST storage:** Manual credit adjustments are stored in a **separate** `admin_adjustments` table in SQLite, NOT in the hash chain.
 
-Each row in `admin_adjustments` has its own tamper-evidence:
 ```
 AdminAdjustment {
   id:               uuid-v4
@@ -329,7 +352,8 @@ AdminAdjustment {
   signature:        Ed25519.sign(operator_private_key, SHA-256(id+":"+node_id+":"+credits_delta_microcredits+":"+reason+":"+operator_key_id+":"+timestamp))
 }
 ```
-**Tamper-evidence:** Each `admin_adjustments` row is individually signed by the issuing operator's Ed25519 key. An attacker who can write to the SQLite file can insert or modify rows, but cannot forge a valid signature without the operator's private key. The audit protocol (§4.2 Step 3) verifies all operator signatures when reconciling the balance. This is the same trust model as the main chain — signatures, not chaining, are the tamper-evidence primitive here. Chaining `admin_adjustments` to the main chain would require ADMIN_ADJUST entries to appear in chain traversal, breaking the contiguity invariant.
+
+> **Design invariant:** `admin_adjustments` rows are NOT in the hash chain. Each is individually Ed25519-signed by the issuing operator. Chain traversal (`prev_entry_hash`) always references the previous regular entry — no gaps, no skipped entries. Signatures, not chaining, are the tamper-evidence primitive here.
 
 ### 4.2 — Verification Procedure
 
@@ -430,10 +454,16 @@ A node could claim to have run inference without doing real work.
 ### 5.3 — Node Sock-Puppeting
 
 - One person cannot register the same physical GPU under multiple node IDs to earn double credits.
-- **Detection:** Hardware fingerprint is **required** for all node types. A GPU UUID alone is software-readable and can be spoofed by a malicious driver; binding it to the motherboard serial + CPU ID raises the attack cost significantly.
-  - **NVIDIA:** `SHA-256(gpu_uuid + ":" + motherboard_serial + ":" + cpu_id + ":" + machine_id)` — ":" delimiter between every field prevents prefix-collision attacks (e.g. `"abc"+"def"` == `"ab"+"cdef"` without delimiters). GPU UUID + machine-id provides primary uniqueness; motherboard serial and CPU ID add depth.
-  - **AMD/CPU nodes:** `SHA-256(motherboard_serial + ":" + cpu_id + ":" + machine_id)` via `sysinfo` crate + `/etc/machine-id` (Linux) / `IOPlatformUUID` (macOS) / registry MachineGuid (Windows).
-- **Fallback for generic serials:** Many OEM boards return `"To be filled by O.E.M."`, `"None"`, or empty for motherboard serial. The fingerprint algorithm must detect these sentinel values and exclude the serial field from the hash when any field is blank or a known-generic string. `/etc/machine-id` (Linux) is a high-entropy UUID generated on first OS install and is always present — it is the primary uniqueness anchor. The full priority order: `machine_id` (always used) → `gpu_uuid` (if NVIDIA/AMD) → `cpu_id` (always used) → `motherboard_serial` (only if non-generic).
+- **Detection:** Hardware fingerprint = `SHA-256(field1 + ":" + field2 + ...)` with `":"` delimiters to prevent prefix-collision attacks.
+
+| Priority | Field | Source | Notes |
+|----------|-------|--------|-------|
+| 1 | machine_id | `/etc/machine-id` (Linux), `IOPlatformUUID` (macOS), `MachineGuid` (Win) | Always used, high entropy, primary uniqueness anchor |
+| 2 | gpu_uuid | nvml-wrapper | NVIDIA/AMD only |
+| 3 | cpu_id | sysinfo | Always used |
+| 4 | motherboard_serial | sysinfo | Only if non-generic (skip "To be filled by O.E.M.", empty, "None") |
+
+- NVIDIA: `SHA-256(gpu_uuid:motherboard_serial:cpu_id:machine_id)`. AMD/CPU nodes: omit `gpu_uuid`.
 - Duplicate fingerprint hash → second registration rejected; operator alerted.
 
 ---

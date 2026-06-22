@@ -1,6 +1,24 @@
+---
+type: spec
+title: Project Specification
+description: Product identity, features F1-F9, phase roadmap, BD market context, success metrics
+tags: [architecture, planning, bangladesh, phase-0, phase-1, phase-2, phase-3, phase-4]
+timestamp: "2026-06-22"
+status: active
+phase: "0-4"
+authority:
+  - product_identity
+  - feature_list
+  - bd_market_context
+  - success_metrics
+  - oss_analysis_protocol
+depends_on: []
+token_estimate: 3000
+---
+
 # Swarm-OS: Project Specification
 
-> **The Story:** Every night, millions of GPUs sleep unused inside gaming rigs, workstations, and idle servers worldwide. Swarm-OS wakes them up. Contributors pool idle compute into a P2P mesh; consumers tap it to run 7B–70B models at zero recurring cloud cost. Everyone earns credit for what they give; everyone spends credit for what they consume. No AWS bill. No single point of failure. Made in Bangladesh, built for the world.
+> **The Story:** Contributors pool idle GPU/CPU compute into a P2P mesh; consumers run 7B-70B models at zero recurring cloud cost. Everyone earns credit for what they give. Made in Bangladesh, built for the world.
 
 ---
 
@@ -51,10 +69,7 @@
 
 ### F1: Heterogeneous Resource Pooling
 - Auto-detect CPU cores, RAM, VRAM, GPU model via `sysinfo` + `nvml` Rust crates
-- **Scheduling is two-phase:**
-  1. **Pre-filter (hard gates):** exclude nodes where `free_vram_gb < shard_min_vram` OR `free_ram_gb < shard_min_ram` OR backend incompatible with model format OR node alive TTL expired. A high-RAM CPU node must never receive a GPU-required shard.
-  2. **Score eligible nodes:** `score = (vram_gb × 4) + (ram_gb × 0.5) + (cpu_cores × 0.25) + backend_bonus + locality_bonus`
-     where `backend_bonus`: cuda=10, metal=8, vulkan=5, cpu=0 (from governance.md scheduler policy)
+- **Scheduling is two-phase:** hard-gate pre-filter (VRAM, RAM, backend, TTL) then weighted capability scoring. See [architecture.md §3](./architecture.md) for the canonical algorithm and [governance.md §3.1](./governance.md) for the config schema.
 - Support: NVIDIA CUDA, AMD ROCm, Apple Metal/MPS, CPU-only (via llama.cpp backends)
 - **Stolen from:** GPUStack worker profiler (`gpustack/gpustack/worker/`)
 
@@ -72,8 +87,8 @@
 
 ### F4: AI Inference Engine
 - llama.cpp as the universal backend (GGUF models)
-- Rust bindings via `llama-rs` or `llama-cpp-rs`
-- Model sharding across nodes using Exo's ring topology for 70B+ models
+- Rust bindings via `llama-cpp-2` (`utilityai/llama-cpp-rs`) — `rustformers/llama-rs` is archived
+- Model sharding across nodes using clean-room Rust pipeline-parallel ring topology for 70B+ models
 - Supported model families: Llama 3, Mistral, Qwen, Gemma, Phi
 - **Stolen from:** exo-labs/exo shard logic, ggerganov/llama.cpp
 
@@ -86,9 +101,7 @@
 ### F6: Contribution Ledger
 - Every node tracks: `tokens_generated` vs. `compute_units_spent`
 - Ledger entries are append-only, timestamped, node-signed (Ed25519)
-- Credit formula: `credits_earned = tokens_generated × 0.008 [× 1.1 if node_score > 80]` — flat rate with high-score bonus (see governance.md §3.4)
-- `credits_spent = (input_tokens × 0.006) + (output_tokens × 0.01)` — aligned with governance.md ledger policy (1 credit ≈ 100 output tokens)
-- Platform spread: earn rate (0.008) < output spend rate (0.01); the ~20% margin funds operations and node validation infrastructure
+- Credit formula: earn rate 0.008/token with high-score bonus, spend rate 0.006 input + 0.01 output. ~20% platform spread. See [governance.md §3.4](./governance.md) for the canonical formula, config schema, and top-up tiers.
 - Optional future: export ledger to bKash/Nagad micropayment rails
 
 ### F7: Observability Stack
