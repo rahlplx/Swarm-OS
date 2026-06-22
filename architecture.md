@@ -87,15 +87,14 @@ The Blackboard is a coordination pattern from classic distributed AI: agents sha
       meta          → {"version": "0.2.1", "join_time": "2025-01-15T08:00:00Z", "country": "BD"}
   jobs/
     {job_id}/
-      request       → {model, messages, max_tokens, stream, api_key}
+      request       → {model, job_token, max_tokens, stream}  // api_key and prompt stripped; delivered direct P2P to assigned nodes only
       status        → "queued" | "scheduled" | "running" | "streaming" | "done" | "failed"
       shards/
         {shard_idx} → {"node_id": "...", "layer_start": 0, "layer_end": 16, "status": "running"}
       result        → streaming token buffer reference
   ledger/
     {node_id}/
-      deltas/
-        {timestamp} → {"tokens_generated": 120, "credits": 1.44, "job_id": "...", "sig": "..."}
+      head_hash     → "sha256_of_current_sqlite_wal_chain_head"  // deltas stored in SQLite WAL on orchestrator, not etcd
   config/
     scheduler/      → scheduling policy overrides
     rate_limits/    → per-tier API limits
@@ -290,7 +289,7 @@ Prometheus Server
 - Orchestrator verifies signatures before writing ledger
 
 ### API Key Security
-- Keys hashed (SHA-256) at rest in etcd
+- Keys hashed (Argon2id, time=1, mem=64MB, parallelism=4, per-key random salt) at rest in etcd
 - Keys prefixed: `swrm_sk_` (user), `swrm_adm_` (admin), `swrm_node_` (inter-node)
 - Ed25519 signature chain for credits deduction log — each entry contains `SHA-256(prev_entry)` + node's Ed25519 signature; tamper-evident without a shared secret
 

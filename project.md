@@ -83,7 +83,7 @@
 - Every node tracks: `tokens_generated` vs. `compute_units_spent`
 - Ledger entries are append-only, timestamped, node-signed (Ed25519)
 - Credit formula: `credits_earned = tokens_generated × node_score_weight`
-- `credits_spent = input_tokens + output_tokens × 1.5`
+- `credits_spent = (input_tokens × 0.006) + (output_tokens × 0.009)` — aligned with governance.md ledger policy
 - Optional future: export ledger to bKash/Nagad micropayment rails
 
 ### F7: Observability Stack

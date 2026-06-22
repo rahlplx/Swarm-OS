@@ -81,8 +81,8 @@ Deployed at: `app.swarm-os.dev` (Cloudflare Pages)
 │                                                          │
 │  Detected OS: Linux x86_64                               │
 │                                                          │
-│  [↓ Download swarm-agent-linux-x64.AppImage  (18 MB)]   │
-│  [↓ Windows .exe]  [↓ macOS .dmg]  [↓ Debian .deb]     │
+│  [↓ Download swarm-agent-linux-x64.deb  (18 MB)]        │
+│  [↓ Windows .exe]  [↓ macOS .dmg]  [↓ AppImage]        │
 │                                                          │
 │  SHA-256: a3f9... (verify before running)                │
 │                                                          │
@@ -296,7 +296,7 @@ Deployed at: `app.swarm-os.dev` (Cloudflare Pages)
 │                                                          │
 │  [Pay ৳200 via bKash →]                                 │
 │                                                          │
-│  Credits never expire. 1 credit ≈ 100 output tokens.    │
+│  1 credit ≈ 100 output tokens.                          │
 │                                                          │
 └──────────────────────────────────────────────────────────┘
 ```
