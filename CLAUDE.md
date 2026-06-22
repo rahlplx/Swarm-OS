@@ -41,7 +41,7 @@ The system has five layers, each built from battle-tested OSS (no custom distrib
 ## Component → Language Map
 
 - **Node Agent** (Tauri v2): Rust backend (`tokio`, `llama-cpp-rs`, `etcd-client`, `sysinfo`, `nvml-wrapper`, `ed25519-dalek`) + React frontend
-- **Orchestrator**: Rust or Go (`tonic` gRPC, etcd, exo-derived topology logic)
+- **Orchestrator**: Rust (using `tonic` gRPC) or Go (using `grpc-go`), etcd, ring topology logic
 - **API Gateway**: Python (LiteLLM, FastAPI, Redis)
 - **Mesh Control Plane**: Go (headscale + wireguard-go)
 - **Admin Portal**: TypeScript/Next.js + shadcn/ui + react-i18next
