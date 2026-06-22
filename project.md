@@ -83,15 +83,16 @@
 ### F6: Contribution Ledger
 - Every node tracks: `tokens_generated` vs. `compute_units_spent`
 - Ledger entries are append-only, timestamped, node-signed (Ed25519)
-- Credit formula: `credits_earned = tokens_generated × 0.012 [× 1.1 if node_score > 80]` — flat rate with high-score bonus (see governance.md §3.4)
+- Credit formula: `credits_earned = tokens_generated × 0.008 [× 1.1 if node_score > 80]` — flat rate with high-score bonus (see governance.md §3.4)
 - `credits_spent = (input_tokens × 0.006) + (output_tokens × 0.01)` — aligned with governance.md ledger policy (1 credit ≈ 100 output tokens)
+- Platform spread: earn rate (0.008) < output spend rate (0.01); the ~20% margin funds operations and node validation infrastructure
 - Optional future: export ledger to bKash/Nagad micropayment rails
 
 ### F7: Observability Stack
 - Prometheus node_exporter on every node agent
 - Custom metrics: `swarm_tokens_per_second`, `swarm_node_vram_used`, `swarm_job_queue_depth`
 - Grafana dashboards: hourly/weekly capacity, Special Days view (Eid peaks, exams)
-- Alertmanager: node dropout alerts, queue overflow, P95 latency > 5s
+- Alertmanager: node dropout alerts, queue overflow, P95 latency > 8s (SLA is < 8s)
 
 ### F8: Tauri Desktop Agent
 - System tray app: Join Swarm | Pause | View Ledger
