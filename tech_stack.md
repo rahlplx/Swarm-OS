@@ -72,8 +72,8 @@
 - **Repo:** https://github.com/prometheus/prometheus
 - **Role:** Metrics collection from all nodes
 - **Usage:**
-  - Each node agent pushes to Prometheus Pushgateway (for devices behind NAT)
-  - Prometheus scrapes pushgateway every 30s
+  - Each node agent exposes a `/metrics` endpoint (port 9100); Prometheus scrapes it directly every 30s
+  - Pushgateway is NOT used for node agents — it is intended for short-lived batch jobs, not long-running daemons
   - Node exporter on each device for system-level metrics
 - **License:** Apache-2.0
 
@@ -84,6 +84,12 @@
   - Dashboard ID 1860: Node Exporter Full (adapt for swarm nodes)
   - Dashboard ID 15172: Ollama metrics (adapt for llama.cpp metrics)
 - **License:** AGPL-3.0 (use via Grafana Cloud free tier or self-host)
+
+#### 8a. prometheus/alertmanager
+- **Repo:** https://github.com/prometheus/alertmanager
+- **Role:** Alert routing, deduplication, and inhibit rules for swarm events
+- **Usage:** Receives firing alerts from Prometheus; routes to Slack webhook and email per `/swarm/config/alerts`; inhibit_rules suppress `queue_overflow` and `high_latency` when `node_dropout_spike` is already firing (same root cause)
+- **License:** Apache-2.0
 
 #### 9. tauri-apps/tauri
 - **Repo:** https://github.com/tauri-apps/tauri
@@ -167,6 +173,7 @@ Swarm-OS
 │   ├── reqwest (HTTP)
 │   ├── sysinfo (resource profiling)
 │   ├── nvml-wrapper (NVIDIA GPU)
+│   ├── ed25519-dalek (ledger entry signing)
 │   └── opentelemetry (tracing)
 │
 ├── Orchestrator (Rust or Go service)
@@ -187,7 +194,7 @@ Swarm-OS
 ├── Observability
 │   ├── prometheus
 │   ├── prometheus/node_exporter
-│   ├── prometheus/pushgateway
+│   ├── prometheus/alertmanager
 │   └── grafana
 │
 └── Admin Portal (TypeScript/Next.js)

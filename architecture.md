@@ -45,6 +45,7 @@
 │  │     - backend incompatible with model → exclude             │   │
 │  │     - node alive TTL expired         → exclude              │   │
 │  │  3. Score eligible nodes: VRAM×4 + RAM×0.5 + CPU×0.25      │   │
+│  │     + backend_bonus (cuda=10/metal=8/vulkan=5/cpu=0)        │   │
 │  │     + locality_bonus (same ASN/city preferred)              │   │
 │  │  4. For large models: split into K shards (ring topology)   │   │
 │  │  5. Assign shards to top-K scoring nodes                    │   │
@@ -87,20 +88,22 @@ The Blackboard is a coordination pattern from classic distributed AI: agents sha
       meta          → {"version": "0.2.1", "join_time": "2025-01-15T08:00:00Z", "country": "BD"}
   jobs/
     {job_id}/
-      request       → {model, messages, max_tokens, stream, api_key}
+      request       → {model, job_token, max_tokens, stream}  // api_key and prompt stripped; delivered direct P2P to assigned nodes only
       status        → "queued" | "scheduled" | "running" | "streaming" | "done" | "failed"
       shards/
         {shard_idx} → {"node_id": "...", "layer_start": 0, "layer_end": 16, "status": "running"}
       result        → streaming token buffer reference
   ledger/
     {node_id}/
-      deltas/
-        {timestamp} → {"tokens_generated": 120, "credits": 1.44, "job_id": "...", "sig": "..."}
+      head_hash     → "sha256_of_current_sqlite_wal_chain_head"  // deltas stored in SQLite WAL on orchestrator, not etcd
   config/
     scheduler/      → scheduling policy overrides
-    rate_limits/    → per-tier API limits
+    rate_limits/    → per-tier API limits (one key per tier name)
     keys/
       {key_hash}    → {"credits": 120.50, "tier": "standard", "owner": "user@example.com"}
+    models/         → model allowlist and per-model VRAM/backend requirements
+    ledger/         → credit formula config (tokens_to_credits_ratio, debit costs)
+    alerts/         → alerting rules and channel config
 ```
 
 ### Node Churn Handling
@@ -117,8 +120,10 @@ Node failure:
   5. Scheduler reads /jobs/{id}/shards → finds shards on dead node
   6. Scheduler marks those shards "failed"
   7. Scheduler re-assigns to next best available node
-  8. Job resumes from last checkpoint (KV cache stored locally on node disk;
-     etcd holds only the pointer: /swarm/jobs/{id}/kvcache_ref → {"node_id": "...", "path": "/tmp/swarm/kv/{id}.bin"})
+  8. Job RESTARTS from token 0 on the new node — NOT a checkpoint resume.
+     The dead node's KV cache (/tmp/swarm/kv/{id}.bin) is unreachable.
+     The etcd pointer /swarm/jobs/{id}/kvcache_ref is cleared.
+     User-facing impact: up to 10s stall, then full re-generation from the beginning.
 
 No single coordinator. Any orchestrator instance watching etcd handles it.
 ```
@@ -162,7 +167,9 @@ Each participating device runs a Tauri v2 app. The Rust backend handles all comp
 │                              │                                     │
 │  ┌───────────────────────────▼─────────────────────────────────┐  │
 │  │              Metrics Exporter                                │  │
-│  │  Prometheus pushgateway client (every 15s)                  │  │
+│  │  Prometheus /metrics endpoint (port 9100) — scraped directly │  │
+│  │  by Prometheus server every 30s (no pushgateway needed for  │  │
+│  │  long-running daemons; pushgateway is for batch/cron only)  │  │
 │  │  Metrics: tokens/s, VRAM%, job count, queue depth           │  │
 │  └─────────────────────────────────────────────────────────────┘  │
 │                                                                  │
@@ -278,6 +285,7 @@ Prometheus Server
 | `swarm_credits_issued_total` | Counter | All-time credits issued |
 | `swarm_job_duration_seconds` | Histogram | P50/P95/P99 latency |
 | `swarm_node_score` | Gauge | Per-node capability score |
+| `swarm_ledger_chain_valid` | Gauge | 1=chain intact, 0=break detected (triggers ledger_chain_break alert) |
 
 ---
 
@@ -290,8 +298,8 @@ Prometheus Server
 - Orchestrator verifies signatures before writing ledger
 
 ### API Key Security
-- Keys hashed (SHA-256) at rest in etcd
-- Keys prefixed: `swrm_sk_` (user), `swrm_adm_` (admin), `swrm_node_` (inter-node)
+- Keys hashed (Argon2id, time=1, mem=64MB, parallelism=4, per-key random salt) at rest in etcd
+- Keys prefixed: `swrm_sk_` (consumer), `swrm_ops_` (operator), `swrm_adm_` (super admin), `swrm_node_` (inter-node)
 - Ed25519 signature chain for credits deduction log — each entry contains `SHA-256(prev_entry)` + node's Ed25519 signature; tamper-evident without a shared secret
 
 ### Network Security

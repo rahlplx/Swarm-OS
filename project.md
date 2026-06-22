@@ -49,8 +49,9 @@
 ### F1: Heterogeneous Resource Pooling
 - Auto-detect CPU cores, RAM, VRAM, GPU model via `sysinfo` + `nvml` Rust crates
 - **Scheduling is two-phase:**
-  1. **Pre-filter (hard gates):** exclude nodes where `free_vram_gb < shard_min_vram` OR `free_ram_gb < shard_min_ram` OR backend incompatible with model format. A high-RAM CPU node must never receive a GPU-required shard.
+  1. **Pre-filter (hard gates):** exclude nodes where `free_vram_gb < shard_min_vram` OR `free_ram_gb < shard_min_ram` OR backend incompatible with model format OR node alive TTL expired. A high-RAM CPU node must never receive a GPU-required shard.
   2. **Score eligible nodes:** `score = (vram_gb × 4) + (ram_gb × 0.5) + (cpu_cores × 0.25) + backend_bonus + locality_bonus`
+     where `backend_bonus`: cuda=10, metal=8, vulkan=5, cpu=0 (from governance.md scheduler policy)
 - Support: NVIDIA CUDA, AMD ROCm, Apple Metal/MPS, CPU-only (via llama.cpp backends)
 - **Stolen from:** GPUStack worker profiler (`gpustack/gpustack/worker/`)
 
@@ -62,7 +63,7 @@
 
 ### F3: Distributed State — The Blackboard
 - etcd v3 cluster as the shared "Blackboard" (classic AI coordination pattern)
-- Keys: `/nodes/{id}/caps`, `/nodes/{id}/alive` (5s TTL), `/jobs/{id}/status`, `/ledger/{id}/delta`
+- Keys: `/swarm/nodes/{id}/caps`, `/swarm/nodes/{id}/alive` (TTL: 10s, write interval: 5s), `/swarm/jobs/{id}/status`, `/swarm/ledger/{id}/head_hash`
 - Node dropout = TTL expiry → Scheduler re-assigns automatically
 - **Stolen from:** etcd usage patterns in k3s + GPUStack scheduler
 
@@ -82,8 +83,8 @@
 ### F6: Contribution Ledger
 - Every node tracks: `tokens_generated` vs. `compute_units_spent`
 - Ledger entries are append-only, timestamped, node-signed (Ed25519)
-- Credit formula: `credits_earned = tokens_generated × node_score_weight`
-- `credits_spent = input_tokens + output_tokens × 1.5`
+- Credit formula: `credits_earned = tokens_generated × 0.012 [× 1.1 if node_score > 80]` — flat rate with high-score bonus (see governance.md §3.4)
+- `credits_spent = (input_tokens × 0.006) + (output_tokens × 0.01)` — aligned with governance.md ledger policy (1 credit ≈ 100 output tokens)
 - Optional future: export ledger to bKash/Nagad micropayment rails
 
 ### F7: Observability Stack
