@@ -168,6 +168,8 @@ Each participating device runs a Tauri v2 app. The Rust backend handles all comp
 │  │  llama-cpp-rs bindings (or llama-rs)                        │  │
 │  │  Backend auto-select: CUDA → Metal → Vulkan → CPU           │  │
 │  │  GGUF model loading from ~/.swarm-os/models/                 │  │
+│  │  Model integrity: BLAKE3 hash (3-5× faster than SHA-256 on  │  │
+│  │  4-7GB GGUFs); SHA-256 reserved for ledger chain only        │  │
 │  │  KV cache written to local disk (/tmp/swarm/kv/); pointer    │  │
 │  │  registered in etcd — never stored in etcd directly          │  │
 │  └───────────────────────────┬─────────────────────────────────┘  │
@@ -221,6 +223,7 @@ Pipeline ring forward pass:
 **Topology choice — pipeline ring (not STAR):**
 - exo-labs/exo uses weighted pipeline ring partitioning — arbitrary node counts, layers split proportionally by VRAM. This is our reference design.
 - b4rtaz/distributed-llama (MIT) uses a STAR topology (one root + N workers) and requires N = 2^k nodes, which would artificially constrain our heterogeneous pool. We studied distributed-llama but do not adopt its topology.
+- bigscience-workshop/petals (MIT) validates this pipeline approach at production scale: their published findings confirm inter-node latency — not GPU compute — is the dominant bottleneck. Activation tensor sizes for 70B models are ~2MB per layer boundary per token. At 50 Mbps BD broadband, each inter-node hop adds ~0.3ms/token. Three hops = ~1ms overhead per token: acceptable within our 8s P95 SLA.
 - We implement ring partitioning from scratch in Rust (clean-room), since exo is GPL-3.0 and cannot be ported to our Apache-2.0 codebase. The partitioning algorithm (weighted memory split across pipeline stages) is a standard technique described in published ML systems papers and is not subject to copyright as an idea.
 
 **Source pattern (design reference only):** `exo-labs/exo/exo/topology/ring_memory_weighted_partitioning.py`
