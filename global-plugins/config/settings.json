@@ -1,6 +1,13 @@
 {
   "_comment": "Template for ~/.claude/settings.json — run install.sh to apply with correct PLUGIN_DIR",
   "mcpServers": {
+    "stitch": {
+      "command": "npx",
+      "args": ["-y", "@_davideast/stitch-mcp", "proxy"],
+      "env": {
+        "STITCH_API_KEY": "YOUR_STITCH_API_TOKEN_HERE"
+      }
+    },
     "zen-router": {
       "command": "python3",
       "args": ["PLUGIN_DIR/zen-router/server.py"],

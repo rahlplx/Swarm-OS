@@ -17,6 +17,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_DIR="$HOME/.claude"
 ZEN_KEY="${OPENCODE_ZEN_API_KEY:-}"
+STITCH_KEY="${STITCH_API_TOKEN:-}"
 
 # ── Colours ───────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
@@ -39,6 +40,12 @@ command -v git    >/dev/null || error "git is required"
 if [[ -z "$ZEN_KEY" ]]; then
     warn "OPENCODE_ZEN_API_KEY not set. zen-router will be installed but won't work until you set it."
     warn "Add to ~/.bashrc: export OPENCODE_ZEN_API_KEY=sk-..."
+fi
+
+if [[ -z "$STITCH_KEY" ]]; then
+    warn "STITCH_API_TOKEN not set. stitch MCP will be installed but won't work until you set it."
+    warn "Get your key: stitch.withgoogle.com → Settings → API Tokens"
+    warn "Add to ~/.bashrc: export STITCH_API_TOKEN=AQ...."
 fi
 
 # ── 1. Install fablize ────────────────────────────────────────────────────────
@@ -107,6 +114,7 @@ STOP_HOOK="$PLUGIN_ROOT/fablize/hooks/gate_stop.py"
 # Pass all shell vars as env so the quoted heredoc (no shell expansion) can read them safely.
 # A special character in ZEN_KEY or a path cannot inject code this way.
 SETTINGS="$SETTINGS" ZEN_DIR="$ZEN_DIR" ZEN_KEY="$ZEN_KEY" \
+STITCH_KEY="$STITCH_KEY" \
 ROUTER_HOOK="$ROUTER_HOOK" ROUTER_GATE="$ROUTER_GATE" \
 POST_TOOL_GATE="$POST_TOOL_GATE" STOP_HOOK="$STOP_HOOK" \
 python3 - <<'PYEOF'
@@ -120,6 +128,11 @@ except json.JSONDecodeError:
     existing = {}
 
 mcp = existing.setdefault("mcpServers", {})
+mcp["stitch"] = {
+    "command": "npx",
+    "args": ["-y", "@_davideast/stitch-mcp", "proxy"],
+    "env": {"STITCH_API_KEY": os.environ["STITCH_KEY"]},
+}
 mcp["zen-router"] = {
     "command": "python3",
     "args": [f"{os.environ['ZEN_DIR']}/server.py"],
@@ -150,7 +163,25 @@ settings_path.write_text(json.dumps(existing, indent=2))
 print("settings.json updated")
 PYEOF
 
-# ── 4. Append token-efficiency block to CLAUDE.md ────────────────────────────
+# ── 4. Install stitch-skills into .claude/skills/ ────────────────────────────
+info "Installing stitch-skills (google-labs-code)..."
+SKILLS_DEST="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "")/.claude/skills"
+if [[ -n "$SKILLS_DEST" ]]; then
+    mkdir -p "$SKILLS_DEST"
+    SKILLS_TMP="$(mktemp -d)"
+    git clone --depth=1 https://github.com/google-labs-code/stitch-skills.git "$SKILLS_TMP" 2>/dev/null
+    find "$SKILLS_TMP" -name "SKILL.md" | while read f; do
+        skill_name=$(basename "$(dirname "$f")")
+        cp "$f" "$SKILLS_DEST/${skill_name}.md"
+    done
+    rm -rf "$SKILLS_TMP"
+    skill_count=$(ls "$SKILLS_DEST"/*.md 2>/dev/null | wc -l)
+    info "Installed $skill_count stitch skills → $SKILLS_DEST"
+else
+    warn "Could not determine git repo root — skipping stitch-skills install"
+fi
+
+# ── 5. Append token-efficiency block to CLAUDE.md ────────────────────────────
 info "Updating ~/.claude/CLAUDE.md with token-efficiency layer..."
 CLAUDE_MD="$CLAUDE_DIR/CLAUDE.md"
 touch "$CLAUDE_MD"
@@ -167,15 +198,20 @@ echo ""
 echo "═══════════════════════════════════════════════════════"
 echo "  Installation complete."
 echo ""
-echo "  fablize:    $PLUGIN_ROOT/fablize"
-echo "  zen-router: $ZEN_DIR"
-echo "  settings:   $SETTINGS"
-echo "  CLAUDE.md:  $CLAUDE_MD"
+echo "  fablize:       $PLUGIN_ROOT/fablize"
+echo "  zen-router:    $ZEN_DIR"
+echo "  stitch MCP:    npx @_davideast/stitch-mcp proxy"
+echo "  stitch-skills: .claude/skills/ (14 skills)"
+echo "  settings:      $SETTINGS"
+echo "  CLAUDE.md:     $CLAUDE_MD"
 echo ""
 if [[ -z "$ZEN_KEY" ]]; then
-echo "  ⚠  Set your API key:"
+echo "  ⚠  Set OpenCode Zen key:"
 echo "     export OPENCODE_ZEN_API_KEY=sk-..."
-echo "     (add to ~/.bashrc or ~/.zshrc)"
+fi
+if [[ -z "$STITCH_KEY" ]]; then
+echo "  ⚠  Set Stitch API token:"
+echo "     export STITCH_API_TOKEN=AQ...."
 fi
 echo ""
 echo "  Restart Claude Code for hooks to take effect."
