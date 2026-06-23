@@ -68,7 +68,12 @@ impl ModelManager {
         for entry in entries {
             let entry = entry?;
             let path = entry.path();
-            if path.extension().and_then(|e| e.to_str()) == Some("gguf") {
+            if path
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(|ext| ext.eq_ignore_ascii_case("gguf"))
+                .unwrap_or(false)
+            {
                 let metadata = std::fs::metadata(&path)?;
                 models.push(ModelInfo {
                     name: path

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { CapabilityBadge } from "./CapabilityBadge";
 
@@ -25,12 +25,22 @@ function formatBytes(bytes: number): string {
 export function HardwareDisplay() {
   const [profile, setProfile] = useState<HardwareProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const mounted = useRef(false);
 
-  useEffect(() => {
+  const detect = useCallback(() => {
     invoke<HardwareProfile>("detect_hardware")
-      .then(setProfile)
+      .then((p) => {
+        setProfile(p);
+        setError(null);
+      })
       .catch((err: unknown) => setError(String(err)));
   }, []);
+
+  useEffect(() => {
+    if (mounted.current) return;
+    mounted.current = true;
+    queueMicrotask(detect);
+  }, [detect]);
 
   if (error) return <div role="alert">Error: {error}</div>;
   if (!profile) return <div>Detecting hardware...</div>;
@@ -55,8 +65,8 @@ export function HardwareDisplay() {
             "No GPU detected"
           ) : (
             <ul>
-              {profile.gpus.map((gpu, i) => (
-                <li key={i}>
+              {profile.gpus.map((gpu, index) => (
+                <li key={`${gpu.name}-${index}`}>
                   {gpu.name} — {formatBytes(gpu.vram_bytes)} ({gpu.backend})
                 </li>
               ))}

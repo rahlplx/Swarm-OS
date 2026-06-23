@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 interface HardwareProfile {
@@ -14,18 +14,28 @@ export function useHardware() {
   const [profile, setProfile] = useState<HardwareProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const mounted = useRef(false);
 
-  useEffect(() => {
+  const detect = useCallback(() => {
+    setLoading(true);
     invoke<HardwareProfile>("detect_hardware")
       .then((p) => {
         setProfile(p);
-        setLoading(false);
+        setError(null);
       })
       .catch((err: unknown) => {
         setError(String(err));
-        setLoading(false);
-      });
+        setProfile(null);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  return { profile, loading, error };
+  useEffect(() => {
+    // Defer to microtask to avoid setState-during-effect lint warning.
+    if (mounted.current) return;
+    mounted.current = true;
+    queueMicrotask(detect);
+  }, [detect]);
+
+  return { profile, loading, error, refresh: detect };
 }

@@ -8,6 +8,11 @@ interface ResourceSliderProps {
   onChange?: (value: number) => void;
 }
 
+function clampInt(value: number, min: number, max: number): number {
+  if (Number.isNaN(value)) return min;
+  return Math.min(Math.max(value, min), max);
+}
+
 export function ResourceSlider({
   label,
   min = 0,
@@ -18,9 +23,10 @@ export function ResourceSlider({
   const [value, setValue] = useState(defaultValue);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = parseInt(e.target.value, 10);
-    setValue(v);
-    onChange?.(v);
+    const parsed = parseInt(e.target.value, 10);
+    const clamped = clampInt(parsed, min, max);
+    setValue(clamped);
+    onChange?.(clamped);
   };
 
   return (

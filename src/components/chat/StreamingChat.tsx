@@ -1,8 +1,15 @@
 import { useState } from "react";
 
 interface Message {
+  id: string;
   role: "user" | "assistant";
   content: string;
+}
+
+let messageCounter = 0;
+function nextMessageId(): string {
+  messageCounter += 1;
+  return `msg-${messageCounter}`;
 }
 
 export function StreamingChat() {
@@ -10,16 +17,20 @@ export function StreamingChat() {
   const [input, setInput] = useState("");
 
   const handleSend = () => {
-    if (!input.trim()) return;
-    setMessages((prev) => [...prev, { role: "user", content: input }]);
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    setMessages((prev) => [
+      ...prev,
+      { id: nextMessageId(), role: "user", content: trimmed },
+    ]);
     setInput("");
   };
 
   return (
     <div data-testid="streaming-chat">
       <div data-testid="message-list">
-        {messages.map((m, i) => (
-          <div key={i} data-testid={`message-${m.role}`}>
+        {messages.map((m) => (
+          <div key={m.id} data-testid={`message-${m.role}`}>
             <strong>{m.role}:</strong> {m.content}
           </div>
         ))}

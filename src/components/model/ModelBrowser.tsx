@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 interface ModelInfo {
@@ -11,12 +11,38 @@ interface ModelInfo {
 
 export function ModelBrowser() {
   const [models, setModels] = useState<ModelInfo[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const mounted = useRef(false);
+
+  const refresh = useCallback(() => {
+    invoke<ModelInfo[]>("list_models")
+      .then((m) => {
+        setModels(m);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        const msg = String(err);
+        setError(msg);
+        setModels([]);
+        if (import.meta.env.DEV) {
+          console.warn("ModelBrowser: failed to list models:", msg);
+        }
+      });
+  }, []);
 
   useEffect(() => {
-    invoke<ModelInfo[]>("list_models")
-      .then(setModels)
-      .catch(() => {});
-  }, []);
+    if (mounted.current) return;
+    mounted.current = true;
+    queueMicrotask(refresh);
+  }, [refresh]);
+
+  if (error) {
+    return (
+      <div data-testid="model-browser" role="alert">
+        Failed to load models
+      </div>
+    );
+  }
 
   if (models.length === 0) {
     return <div data-testid="model-browser">No models found</div>;
@@ -27,7 +53,7 @@ export function ModelBrowser() {
       <h2>Models</h2>
       <ul>
         {models.map((m) => (
-          <li key={m.name} data-testid={`model-${m.name}`}>
+          <li key={m.path} data-testid={`model-${m.name}`}>
             {m.name} — {(m.size_bytes / 1e9).toFixed(1)} GB
           </li>
         ))}
