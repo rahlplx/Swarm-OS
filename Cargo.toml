@@ -1,0 +1,9 @@
+[workspace]
+members = ["src-tauri"]
+resolver = "2"
+
+[profile.release]
+lto = true
+strip = true
+opt-level = "s"
+codegen-units = 1

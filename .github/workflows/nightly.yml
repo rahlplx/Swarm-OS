@@ -1,0 +1,28 @@
+name: Nightly GPU Tests
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  gpu-tests:
+    name: GPU inference tests
+    runs-on: ubuntu-latest
+    if: false  # Enable when GPU runner is available
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: GPU inference tests
+        run: cargo test --workspace --features gpu-tests
+
+      - name: Binary size check
+        run: |
+          cargo build --release -p swarm-os
+          size=$(stat -c%s target/release/swarm-os)
+          echo "Binary size: $((size / 1048576)) MiB"
+          if [ "$size" -gt $((10 * 1048576)) ]; then
+            echo "::error::Binary exceeds 10 MiB limit"
+            exit 1
+          fi

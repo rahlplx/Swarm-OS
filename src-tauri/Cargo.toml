@@ -1,0 +1,36 @@
+[package]
+name = "swarm-os"
+version = "0.1.0"
+edition = "2021"
+description = "Decentralized P2P AI inference network — desktop agent"
+license = "Apache-2.0"
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+sysinfo = "0.33"
+blake3 = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+dirs = "6"
+
+[dev-dependencies]
+tempfile = "3"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+gpu-tests = []
+metal-tests = []
+cuda-tests = []
+
+[lib]
+name = "swarm_os_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]

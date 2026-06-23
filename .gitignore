@@ -2,3 +2,29 @@ __pycache__/
 *.pyc
 *.pyo
 .cache/
+
+# Rust
+target/
+*.swp
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Swarm-OS runtime data
+.swarm-os/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
