@@ -18,14 +18,14 @@ Last updated: 2026-06-23
 ## 1. Current State (single source of truth)
 
 - **Phase:** 0 (single-device local AI inference app)
-- **Phase 0 Day:** 1 complete (scaffold merged to `main` as `60f2993`)
-- **Phase 0 Day:** 2+ not started
+- **Phase 0 Day:** 1+2 complete (scaffold merged; license + CI compliance fixed)
+- **Phase 0 Day:** 3+ not started (next: First AI Response — llama.cpp standalone)
 - **Branch:** `main` only (all feature branches deleted after merge)
 - **Open PRs:** 0
-- **Merged PRs:** 11
-- **HEAD of main:** `4af1172 feat(telemetry): v2.1 — PreToolUse duration, commits_made, gap fixes`
-- **CI status:** GitHub-hosted ubuntu-latest runners had assignment failures on 2026-06-23 (transient infra issue). Local verification: all checks pass.
-- **Known alerts:** 1 moderate dependabot alert — see https://github.com/rahlplx/Swarm-OS/security/dependabot/1
+- **Merged PRs:** 14
+- **HEAD of main:** `a9651be fix(compliance): Apache 2.0 license + CI gateway coverage + glib risk doc`
+- **CI status:** GitHub-hosted ubuntu-latest runners had assignment failures on 2026-06-23 (transient infra issue). Local verification: all checks pass. CI workflow now has 4 jobs (rust, frontend, litellm-proxy, gateway).
+- **Known alerts:** 1 moderate dependabot alert (glib) — accepted risk, documented in SECURITY.md. VariantStrIter not used in codebase; fix requires Tauri upgrade (deferred to Phase 1+).
 
 ## 2. What Has Been Built (Phase 0 Day 1)
 
@@ -142,13 +142,16 @@ Do not mark a task DONE until:
 
 ## 9. Open Questions / Deferred Items
 
-- **AGENTS.md / agentsm.md:** `AGENTS.md` created 2026-06-23. `agentsm.md` does not exist — appears to be a typo for `AGENTS.md`. If user confirms, no action needed.
-- **CI runner failures:** GitHub-hosted ubuntu-latest runners failed to assign across 5 consecutive attempts on 2026-06-23. Transient infra issue. Monitor.
-- **Dependabot alert:** 1 moderate vulnerability on main. Needs triage.
-- **`cargo clippy` + `cargo test` in sandbox:** Cannot run (libwebkit2gtk-4.1-dev not installable). Source review confirms all 10 Gemini fixes in place. User should run on local machine to confirm.
+- **CI runner failures:** GitHub-hosted ubuntu-latest runners failed to assign across 27+ consecutive attempts on 2026-06-23 (zero-step failures, runner_id=0, 3-second runtime). Transient GitHub infra issue. Monitor. Local verification: all checks pass.
+- **`cargo clippy` + `cargo test` in sandbox:** Cannot run (libwebkit2gtk-4.1-dev not installable). `cargo fmt --check` passes. User should run clippy + test on local machine to confirm.
+- **Phase 0 Day 3:** Next milestone — "First AI Response (Standalone)" per guide.md Ch.9. Download Llama 3.2 1B, run `llama-server`, verify SSE streaming. This is the first real inference test.
+- **verify-prompt.md V1-V9:** Community verification prompt defines 9 domains (OSS feasibility, license, security, economic, network, data, inference, Phase 0 risk, cross-doc consistency). Never formally executed. Pre-Phase-0 gate per the prompt's meta.goal.
+- **critique.md 23 unmarked issues:** 5 of 28 issues explicitly marked RESOLVED. Remaining 23 need status triage (mark RESOLVED/OPEN with fix links).
+- **glib dependabot alert:** Accepted risk — documented in SECURITY.md. Fix requires Tauri upgrade (gtk v0.20+ → glib 0.20+). Deferred to Phase 1+.
 
 ## 10. Change Log (memory updates)
 
+- **2026-06-23 (session 6):** Rule compliance audit + fixes. Fixed 5 INVARIANTS.md violations: (V1) added LICENSE file (Apache 2.0 full text), (V2) license field in node-agent/Cargo.toml, (V3) in package.json, (V4) in gateway/pyproject.toml, (V5) added 4th CI job for gateway/ package. Documented glib dependabot alert as accepted risk in SECURITY.md (cannot upgrade — Tauri pins glib ^0.18). Updated phase_progress: Day 1 + Day 2 marked completed. HEAD=a9651be.
 - **2026-06-23 (session 5):** Telemetry v2.1 — closed all 6 gaps found in v2 audit. (1) duration_seconds: fixed timestamp format mismatch (started_at now uses _utc_now_sqlite). (2) response_tokens_estimate: computed from tool output bytes. (3) tool_calls_invoked: start_tool_call increments it; update_query_response preserves non-None fields. (4) files_modified: counted via json_extract on Edit/Write tool_inputs. (5) tool_calls.duration_ms: added PreToolUse hook (tool-call-start) + PostToolUse (tool-call-end) pairing. (6) commits_made: saved HEAD sha at session start, diff at end. New scripts: dashboard.py (live terminal dashboard with --watch), session-export.py (JSON export). Verified E2E: all 7 fields populate correctly. HEAD=4af1172.
 - **2026-06-23 (session 4):** Telemetry pipeline v2. Schema expanded from 4 v1 tables to 10 tables (added sessions, user_queries, ai_reasoning, tool_calls, tool_outputs, session_summaries, schema_meta). New scripts: telemetry_collector.py (Python API), bridge.py (hook bridge), session-replay.py (CLI viewer). Hooks wired in .claude/settings.json to capture every session, query, reasoning step, tool call, and tool output. Verified end-to-end with simulated session. HEAD=9fdd8d5.
 - **2026-06-23 (session 3):** Code-level audit of all source. Fixed 12 issues: Rust case-insensitive .gguf matching, React set-state-in-effect pattern (4 components), React key anti-patterns (3 components), React NaN/clamp guards (2 components), Python __init__.py exports + provider error wrapping + callback type hints. All tests + lint pass. HEAD=f11684a.

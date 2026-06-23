@@ -28,6 +28,7 @@ Swarm-OS is a decentralized P2P AI inference network where contributors pool idl
 | [guide.md](/guide) | guide | phase_0_day_by_day, non_technical_explanations | 0 | 10,000 | Non-technical ebook-style pre-Phase 0 + Phase 0 guide |
 | [research.md](/research) | reference | benchmark_data, api_shapes, code_samples, oss_verdicts | 0-4 | 17,000 | Component research: benchmarks, code samples, verdicts |
 | [verify-prompt.md](/verify-prompt) | prompt | verification_prompt | pre-0 | 4,200 | Community verification prompt for architecture decisions |
+| [SECURITY.md](/SECURITY) | security | security_policy, vulnerability_disposition | 0-4 | 800 | Security policy + accepted-risk dispositions for dependabot alerts |
 
 ## Reading Paths
 
