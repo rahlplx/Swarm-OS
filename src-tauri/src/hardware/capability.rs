@@ -38,7 +38,7 @@ pub fn compute_capability(profile: &HardwareProfile) -> CapabilityScore {
             GpuBackend::Metal => METAL_BONUS,
             GpuBackend::None => 0.0,
         })
-        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .max_by(|a, b| a.total_cmp(b))
         .unwrap_or(0.0);
 
     let vram_score = vram_gib * VRAM_WEIGHT;

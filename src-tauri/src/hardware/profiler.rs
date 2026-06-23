@@ -40,8 +40,9 @@ impl<G: GpuDetector> SystemProfiler<G> {
     }
 
     pub fn detect(&self) -> HardwareProfile {
-        let mut sys = System::new_all();
-        sys.refresh_all();
+        let mut sys = System::new();
+        sys.refresh_cpu_all();
+        sys.refresh_memory();
 
         let cpu_name = sys
             .cpus()

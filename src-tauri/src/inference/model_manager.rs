@@ -46,9 +46,10 @@ impl ModelManager {
         if !path.exists() {
             return Err(ModelError::FileNotFound(path.to_path_buf()));
         }
-        let data = std::fs::read(path)?;
-        let hash = blake3::hash(&data);
-        Ok(hash.to_hex().to_string())
+        let mut file = std::fs::File::open(path)?;
+        let mut hasher = blake3::Hasher::new();
+        std::io::copy(&mut file, &mut hasher)?;
+        Ok(hasher.finalize().to_hex().to_string())
     }
 
     pub fn verify_file(path: &Path, expected_hash: &str) -> Result<bool, ModelError> {

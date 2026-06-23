@@ -58,7 +58,7 @@ fi
 
 # Binary size check
 if [ -f target/release/swarm-os ]; then
-  size=$(stat -c%s target/release/swarm-os 2>/dev/null || echo 0)
+  size=$(wc -c < target/release/swarm-os 2>/dev/null | tr -d ' ' || echo 0)
   max=$((10 * 1024 * 1024))
   if [ "$size" -gt "$max" ]; then
     echo "Binary too large: $(($size / 1048576)) MiB (max 10 MiB)"

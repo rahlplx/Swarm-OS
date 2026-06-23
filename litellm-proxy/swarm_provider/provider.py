@@ -8,7 +8,7 @@ class SwarmProvider:
         self.config = config or SwarmProviderConfig()
 
     def completion(self, messages: list[dict], **kwargs) -> dict:
-        url = f"{self.config.llama_server_url}/v1/chat/completions"
+        url = f"{self.config.llama_server_url.rstrip('/')}/v1/chat/completions"
         payload = {
             "model": kwargs.get("model", self.config.model_name),
             "messages": messages,

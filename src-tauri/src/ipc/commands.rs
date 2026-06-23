@@ -15,10 +15,12 @@ pub fn get_capability_score() -> CapabilityScore {
 }
 
 #[tauri::command]
-pub fn list_models() -> Vec<crate::inference::ModelInfo> {
-    let models_dir = dirs::data_dir()
-        .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("swarm-os")
+pub fn list_models(app: tauri::AppHandle) -> Vec<crate::inference::ModelInfo> {
+    use tauri::Manager;
+    let models_dir = app
+        .path()
+        .app_data_dir()
+        .unwrap_or_else(|_| std::path::PathBuf::from("."))
         .join("models");
     let manager = crate::inference::ModelManager::new(models_dir);
     manager.list_models().unwrap_or_default()

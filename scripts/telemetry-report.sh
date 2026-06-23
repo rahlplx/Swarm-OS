@@ -23,7 +23,7 @@ IFS='|' read -r passed failed skipped build_ms binary_size <<< "$latest"
 
 echo "║ Tests: $passed passing, $failed failing, $skipped skipped"
 if [ "$binary_size" -gt 0 ] 2>/dev/null; then
-  binary_mib=$(echo "scale=1; $binary_size / 1048576" | bc 2>/dev/null || echo "?")
+  binary_mib=$(awk "BEGIN {printf \"%.1f\", $binary_size / 1048576}" 2>/dev/null || echo "?")
   echo "║ Binary: ${binary_mib} MiB"
 fi
 echo "║ Last build: ${build_ms}ms"

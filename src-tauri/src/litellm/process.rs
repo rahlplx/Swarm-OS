@@ -44,8 +44,8 @@ impl LiteLLMProcess {
                 "--port",
                 &self.config.port.to_string(),
             ])
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
             .spawn()
             .map_err(|e| LiteLLMError::StartFailed(e.to_string()))?;
 
