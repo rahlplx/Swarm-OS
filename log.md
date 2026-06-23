@@ -3,10 +3,19 @@ type: log
 title: Swarm-OS Planning Changelog
 description: Chronological record of planning document changes
 tags: [planning]
-timestamp: "2026-06-22"
+timestamp: "2026-06-23"
 ---
 
 # Planning Changelog
+
+## 2026-06-23
+
+- **Merged** PR #11 (feat(phase0): scaffold Tauri v2 app with TDD harness & telemetry) into `main` as squash commit `60f2993`. Phase 0 Day 1 scaffold complete: 56 tests across Rust/React/Python, hardware profiler, capability scoring, BLAKE3 model verification, SwarmProvider for LiteLLM, telemetry DB, CI pipeline, git hooks.
+- **Fixed** during PR #11 review: added missing `eslint.config.js` (ESLint v9 flat config — CI was failing because the `--ext` flag was removed in commit 0372bbe but no flat config was added). Fixed `react-hooks/set-state-in-effect` warning in `useModelManager.ts` via `useCallback` + `queueMicrotask`. Updated `.gitignore` to ignore `*.egg-info/`.
+- **Verified locally** (CI could not run due to GitHub-hosted ubuntu-latest runner-assignment failures — 5 consecutive attempts, 3-second job failures with zero steps executed): `pnpm lint` ✓, `pnpm test` 19/19 ✓, `pnpm exec tsc --noEmit` ✓, `ruff check .` ✓, `pytest tests/ -v` 6/6 ✓, `cargo fmt --check` ✓. `cargo clippy` + `cargo test` could not run (libwebkit2gtk-4.1-dev not installable in sandbox); source review confirms all 10 Gemini Code Assist findings already addressed in commit 0372bbe.
+- **Deleted** all merged branches: `chore/gitignore`, `claude/global-plugins-setup`, `claude/product-planning-research-oqkcsg`, `claude/init-6nkhbq`. Repo now has only `main`.
+- **Added** `AGENTS.md`: cross-tool agent onboarding file (companion to `CLAUDE.md`). Tool-agnostic; mirrors CLAUDE.md content but defers to CLAUDE.md for Claude Code sessions. Covers authority map, operating protocol, verification gate, security invariants, license constraints, build toolchain, CI checks, branch/PR conventions.
+- **Updated** `CLAUDE.md`: current state changed from "planning/documentation phase" to "Phase 0 in progress — single-device local AI inference app (Tauri v2 + llama-cpp-2 + LiteLLM)".
 
 ## 2026-06-22
 
