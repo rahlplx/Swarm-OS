@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Swarm-OS is a decentralized P2P AI inference network. Contributors pool idle GPU/CPU compute into a WireGuard mesh; consumers run 7B–405B models via an OpenAI-compatible API. A tamper-evident credit ledger tracks earn/spend. Made in Bangladesh (BDT payments via SSLCommerz/bKash), Apache 2.0.
 
-**Current state:** Planning/documentation phase — no implementation code yet. The repo contains planning docs only.
+**Current state:** Phase 0 in progress — single-device local AI inference app (Tauri v2 + llama-cpp-2 + LiteLLM).
 
 ## Architecture
 
@@ -140,3 +140,46 @@ When information appears in multiple docs, the authoritative source is:
 - Benchmark numbers → research.md
 
 When docs conflict, the authoritative source wins. See [index.md](./index.md) for the full authority map.
+
+## Phase 0 Development
+
+### Test Commands
+
+```bash
+# Rust (31 unit + integration tests)
+cargo test --workspace
+
+# React (19 tests via Vitest)
+pnpm test
+
+# Python (LiteLLM proxy)
+cd litellm-proxy && python3 -m pytest tests/ -v
+
+# Type checks
+cargo check --workspace
+pnpm exec tsc --noEmit
+
+# Day 1 acceptance
+bash scripts/acceptance/day01.sh
+
+# Full environment verify
+bash scripts/verify-environment.sh
+
+# Telemetry report
+bash scripts/telemetry-report.sh
+```
+
+### TDD Workflow
+
+Contract tests define interfaces (Rust traits: `GpuDetector`, `InferenceEngine`) → implementation satisfies them → integration tests verify connections. Each day's guide.md Chapter 9 deliverable maps to `scripts/acceptance/dayNN.sh`.
+
+- **Rust**: Traits for mocking (`GpuDetector`, `InferenceEngine`). GPU tests behind `#[cfg(feature = "gpu-tests")]`
+- **React**: Tauri IPC mocked via `src/lib/tauri-mock.ts`. Tests co-located (`*.test.tsx`)
+- **Python**: `respx` for HTTP mocking. Mock llama-server in `conftest.py`
+
+### Auto-Trigger Harness
+
+- Every 5th query: `cargo check` + `tsc --noEmit` (via `.claude/settings.json` hooks)
+- Session end: full test suite + telemetry collection
+- Git pre-commit: `cargo fmt --check` + `clippy` + `tsc` + `ruff`
+- Git pre-push: full test suite + binary size check (< 10 MiB)
