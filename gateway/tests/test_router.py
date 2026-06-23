@@ -1,4 +1,5 @@
 import pytest
+
 from swarm_gateway.router import SwarmRouter, capability_score
 
 
