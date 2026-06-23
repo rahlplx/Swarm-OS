@@ -23,7 +23,7 @@ Last updated: 2026-06-23
 - **Branch:** `main` only (all feature branches deleted after merge)
 - **Open PRs:** 0
 - **Merged PRs:** 11
-- **HEAD of main:** `56184fe docs: add AGENTS.md cross-tool onboarding`
+- **HEAD of main:** `f11684a fix(code): audit-level fixes across Rust, React, Python`
 - **CI status:** GitHub-hosted ubuntu-latest runners had assignment failures on 2026-06-23 (transient infra issue). Local verification: all checks pass.
 - **Known alerts:** 1 moderate dependabot alert — see https://github.com/rahlplx/Swarm-OS/security/dependabot/1
 
@@ -149,4 +149,6 @@ Do not mark a task DONE until:
 
 ## 10. Change Log (memory updates)
 
-- **2026-06-23:** Initial memory file created. State: Phase 0 Day 1 complete, PR #11 merged, all branches deleted, AGENTS.md added.
+- **2026-06-23 (session 3):** Code-level audit of all source. Fixed 12 issues: Rust case-insensitive .gguf matching, React set-state-in-effect pattern (4 components), React key anti-patterns (3 components), React NaN/clamp guards (2 components), Python __init__.py exports + provider error wrapping + callback type hints. All tests + lint pass. HEAD=f11684a.
+- **2026-06-23 (session 2):** Added cross-session memory + rules system: .claude/memory/PROJECT.md, .claude/rules/INVARIANTS.md, .claude/rules/SESSION_PROTOCOL.md, scripts/hooks/on-session-start.sh, SessionStart hook in .claude/settings.json. HEAD=b748fd5.
+- **2026-06-23 (session 1):** Initial memory file created. State: Phase 0 Day 1 complete, PR #11 merged, all branches deleted, AGENTS.md added.
