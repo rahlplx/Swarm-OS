@@ -1,66 +1,54 @@
 #!/usr/bin/env python3
 """
-Swarm-OS Hook Bridge — feeds Claude Code hook events into the telemetry pipeline.
+Swarm-OS Hook Bridge v2 — feeds Claude Code hook events into the telemetry pipeline.
 
-Invoked by .claude/settings.json hooks:
-- SessionStart  → bridge.py session-start
-- UserPromptSubmit → bridge.py user-query    (reads prompt from stdin JSON)
-- PostToolUse   → bridge.py tool-call        (reads tool call from stdin JSON)
-- Stop          → bridge.py session-end      (reads transcript path from stdin JSON)
-
-Claude Code passes a JSON object on stdin for each hook event. The schema varies
-by event type but typically includes: session_id, transcript_path, cwd, hook_event_name,
-and (for UserPromptSubmit) the prompt string.
-
-We persist a stable session_id by writing it to .swarm-os/current-session on
-SessionStart, and reading it on subsequent events.
+Hooks:
+- SessionStart    → bridge.py session-start
+- UserPromptSubmit → bridge.py user-query
+- PreToolUse      → bridge.py tool-call-start  (records start time)
+- PostToolUse     → bridge.py tool-call-end    (records output + computes duration)
+- Stop            → bridge.py session-end
 """
 
 from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any
 
-# Add scripts/ to path so we can import telemetry_collector
-# bridge.py lives in scripts/hooks/, so parent.parent = scripts/
 SCRIPTS_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 from telemetry_collector import TelemetryCollector  # noqa: E402
 
 PROJECT_ROOT = SCRIPTS_DIR.parent
-SESSION_FILE = PROJECT_ROOT / ".swarm-os" / "current-session"
-QUERY_START_FILE = PROJECT_ROOT / ".swarm-os" / "current-query-start"
+STATE_DIR = PROJECT_ROOT / ".swarm-os"
+SESSION_FILE = STATE_DIR / "current-session"
+QUERY_START_FILE = STATE_DIR / "current-query-start"
+TOOL_CALL_FILE = STATE_DIR / "current-tool-call"
 
 
-def _read_stdin_json() -> dict[str, Any]:
-    """Read JSON from stdin. Returns empty dict on parse failure."""
+def _read_stdin_json() -> dict:
     try:
         raw = sys.stdin.read()
-        if not raw.strip():
-            return {}
-        return json.loads(raw)
+        return json.loads(raw) if raw.strip() else {}
     except Exception:
         return {}
 
 
-def _load_session_id() -> str | None:
-    """Load the current session ID from disk."""
+def _load_session_id():
     try:
-        if SESSION_FILE.exists():
-            return SESSION_FILE.read_text().strip()
+        return SESSION_FILE.read_text().strip() if SESSION_FILE.exists() else None
     except Exception:
-        pass
-    return None
+        return None
 
 
-def _save_session_id(session_id: str) -> None:
-    SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
-    SESSION_FILE.write_text(session_id)
+def _save_session_id(sid: str) -> None:
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    SESSION_FILE.write_text(sid)
 
 
 def _clear_session_id() -> None:
@@ -70,237 +58,237 @@ def _clear_session_id() -> None:
         pass
 
 
-def _detect_agent_type(payload: dict) -> tuple[str, str | None]:
-    """Detect agent type and version from hook payload / env."""
+def _load_query_state():
+    try:
+        return json.loads(QUERY_START_FILE.read_text()) if QUERY_START_FILE.exists() else None
+    except Exception:
+        return None
+
+
+def _save_tool_call_id(tc_id: int) -> None:
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    TOOL_CALL_FILE.write_text(str(tc_id))
+
+
+def _load_tool_call_id():
+    try:
+        return int(TOOL_CALL_FILE.read_text().strip()) if TOOL_CALL_FILE.exists() else None
+    except Exception:
+        return None
+
+
+def _clear_tool_call_id() -> None:
+    try:
+        TOOL_CALL_FILE.unlink()
+    except FileNotFoundError:
+        pass
+
+
+def _detect_agent_type(payload: dict):
     cwd = payload.get("cwd", "")
-    # Claude Code sets CLAUDE_SESSION_ID in env
     if os.environ.get("CLAUDE_SESSION_ID") or payload.get("session_id"):
         return "claude-code", os.environ.get("CLAUDE_VERSION")
-    # Super Z sandbox
     if "/home/z/my-project" in cwd:
         return "super-z", None
     return "unknown", None
 
 
-# ── Event handlers ───────────────────────────────────────────────────────────
+def _extract_output(tool_response):
+    if tool_response is None:
+        return None
+    if isinstance(tool_response, str):
+        return tool_response
+    if isinstance(tool_response, dict):
+        if tool_response.get("error"):
+            return str(tool_response["error"])
+        if tool_response.get("stdout"):
+            out = tool_response["stdout"]
+            if tool_response.get("stderr"):
+                out += "\n--- stderr ---\n" + tool_response["stderr"]
+            return out
+        if tool_response.get("content"):
+            content = tool_response["content"]
+            if isinstance(content, list):
+                parts = []
+                for item in content:
+                    if isinstance(item, dict):
+                        parts.append(item.get("text", str(item)))
+                    else:
+                        parts.append(str(item))
+                return "\n".join(parts)
+            return str(content)
+        return json.dumps(tool_response, default=str)
+    return str(tool_response)
 
 
 def cmd_session_start(payload: dict) -> int:
-    """Handle SessionStart event."""
     tc = TelemetryCollector()
     agent_type, agent_version = _detect_agent_type(payload)
-    session_id = tc.start_session(
-        agent_type=agent_type,
-        agent_version=agent_version,
-        cwd=payload.get("cwd"),
-    )
+    session_id = tc.start_session(agent_type=agent_type, agent_version=agent_version, cwd=payload.get("cwd"))
     _save_session_id(session_id)
-    # Emit the bootstrap banner (same as on-session-start.sh)
-    print(
-        "────────────────────────────────────────────────────────────────────────",
-        file=sys.stderr,
-    )
-    print(
-        f"Swarm-OS session started. session_id={session_id} agent={agent_type}",
-        file=sys.stderr,
-    )
-    print(
-        "Telemetry pipeline ACTIVE: queries, reasoning, tool calls, outputs.",
-        file=sys.stderr,
-    )
-    print(
-        "────────────────────────────────────────────────────────────────────────",
-        file=sys.stderr,
-    )
+    print("─" * 72, file=sys.stderr)
+    print(f"Swarm-OS session started. session_id={session_id} agent={agent_type}", file=sys.stderr)
+    print("Telemetry v2 ACTIVE: queries, reasoning, tool calls (with duration),", file=sys.stderr)
+    print("tool outputs, commits, session summary.", file=sys.stderr)
+    print("─" * 72, file=sys.stderr)
     return 0
 
 
 def cmd_user_query(payload: dict) -> int:
-    """Handle UserPromptSubmit event."""
     session_id = _load_session_id()
     if not session_id:
-        # Session wasn't started (e.g. hook fired before SessionStart) — start one
         tc = TelemetryCollector()
         agent_type, agent_version = _detect_agent_type(payload)
-        session_id = tc.start_session(
-            agent_type=agent_type,
-            agent_version=agent_version,
-            cwd=payload.get("cwd"),
-        )
+        session_id = tc.start_session(agent_type=agent_type, agent_version=agent_version, cwd=payload.get("cwd"))
         _save_session_id(session_id)
-
     tc = TelemetryCollector()
-    prompt = payload.get("prompt", "")
-    query_id = tc.log_query(session_id, prompt=prompt)
-    # Record query start time so PostToolUse/Stop can compute response_duration
-    QUERY_START_FILE.parent.mkdir(parents=True, exist_ok=True)
-    QUERY_START_FILE.write_text(
-        json.dumps({"query_id": query_id, "started_at_ms": int(time.time() * 1000)})
-    )
+    query_id = tc.log_query(session_id, prompt=payload.get("prompt", ""))
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    QUERY_START_FILE.write_text(json.dumps({"query_id": query_id, "started_at_ms": int(time.time() * 1000)}))
     return 0
 
 
-def cmd_tool_call(payload: dict) -> int:
-    """Handle PostToolUse event."""
+def cmd_tool_call_start(payload: dict) -> int:
     session_id = _load_session_id()
     if not session_id:
-        return 0  # No active session — nothing to log
-
-    # Load current query_id
-    query_id = None
-    if QUERY_START_FILE.exists():
-        try:
-            data = json.loads(QUERY_START_FILE.read_text())
-            query_id = data.get("query_id")
-        except Exception:
-            pass
-
+        return 0
+    query_state = _load_query_state()
+    query_id = query_state.get("query_id") if query_state else None
     tc = TelemetryCollector()
-
-    # Claude Code PostToolUse payload shape:
-    # {tool_name, tool_input, tool_response, ...}
-    tool_name = payload.get("tool_name", "Unknown")
     tool_input = payload.get("tool_input", {})
-    tool_response = payload.get("tool_response", {})
+    tool_call_id = tc.start_tool_call(
+        session_id=session_id,
+        query_id=query_id or 0,
+        tool_name=payload.get("tool_name", "Unknown"),
+        tool_input=tool_input if isinstance(tool_input, dict) else {"raw": str(tool_input)},
+    )
+    _save_tool_call_id(tool_call_id)
+    return 0
+
+
+def cmd_tool_call_end(payload: dict) -> int:
+    session_id = _load_session_id()
+    if not session_id:
+        return 0
+    tool_call_id = _load_tool_call_id()
+    if not tool_call_id:
+        # Fallback: PreToolUse didn't fire — log in one shot
+        query_state = _load_query_state()
+        query_id = query_state.get("query_id") if query_state else None
+        tc = TelemetryCollector()
+        tool_response = payload.get("tool_response")
+        output = _extract_output(tool_response)
+        success = not (isinstance(tool_response, dict) and tool_response.get("error"))
+        error_message = str(tool_response["error"]) if isinstance(tool_response, dict) and tool_response.get("error") else None
+        tool_input = payload.get("tool_input", {})
+        tc.log_tool_call(
+            session_id=session_id, query_id=query_id or 0,
+            tool_name=payload.get("tool_name", "Unknown"),
+            tool_input=tool_input if isinstance(tool_input, dict) else {"raw": str(tool_input)},
+            output=output, output_type="result", success=success, error_message=error_message,
+        )
+        return 0
+    tc = TelemetryCollector()
+    tool_response = payload.get("tool_response")
+    output = _extract_output(tool_response)
     success = True
     error_message = None
-    output = None
     output_type = "result"
-
-    if isinstance(tool_response, dict):
-        if tool_response.get("error"):
-            success = False
-            error_message = str(tool_response["error"])
-            output = error_message
-            output_type = "error"
-        elif tool_response.get("stdout"):
-            output = tool_response["stdout"]
-            output_type = "stdout"
-            if tool_response.get("stderr"):
-                output += "\n--- stderr ---\n" + tool_response["stderr"]
-        elif tool_response.get("content"):
-            # Read/Edit/Grep return {content: [...]}
-            content = tool_response["content"]
-            if isinstance(content, list):
-                output = "\n".join(
-                    item.get("text", str(item)) if isinstance(item, dict) else str(item)
-                    for item in content
-                )
-            else:
-                output = str(content)
-            output_type = "result"
-        else:
-            output = json.dumps(tool_response, default=str)
-    elif isinstance(tool_response, str):
-        output = tool_response
-    elif tool_response is not None:
-        output = str(tool_response)
-
-    tc.log_tool_call(
-        session_id=session_id,
-        query_id=query_id or 0,  # 0 = unknown query
-        tool_name=tool_name,
-        tool_input=tool_input if isinstance(tool_input, dict) else {"raw": str(tool_input)},
-        output=output,
-        output_type=output_type,
-        success=success,
-        error_message=error_message,
-        duration_ms=payload.get("duration_ms"),
+    if isinstance(tool_response, dict) and tool_response.get("error"):
+        success = False
+        error_message = str(tool_response["error"])
+        output_type = "error"
+    elif isinstance(tool_response, dict) and tool_response.get("stdout"):
+        output_type = "stdout"
+    tc.end_tool_call(
+        tool_call_id=tool_call_id, output=output, output_type=output_type,
+        success=success, error_message=error_message,
     )
+    _clear_tool_call_id()
     return 0
 
 
 def cmd_session_end(payload: dict) -> int:
-    """Handle Stop event."""
     session_id = _load_session_id()
     if not session_id:
         return 0
-
     tc = TelemetryCollector()
-
-    # Compute response_duration for the last query (rough)
+    # Update last query with response metadata
     if QUERY_START_FILE.exists():
         try:
             data = json.loads(QUERY_START_FILE.read_text())
             started_at_ms = data.get("started_at_ms", 0)
-            duration_ms = int(time.time() * 1000) - started_at_ms
             query_id = data.get("query_id")
+            duration_ms = int(time.time() * 1000) - started_at_ms
             if query_id:
-                tc.update_query_response(query_id, response_duration_ms=duration_ms)
+                import sqlite3
+                conn = sqlite3.connect(str(tc.db_path))
+                total_output_bytes = conn.execute(
+                    """SELECT COALESCE(SUM(LENGTH(to2.content)), 0)
+                       FROM tool_outputs to2
+                       JOIN tool_calls tc2 ON to2.tool_call_id = tc2.id
+                       WHERE tc2.query_id = ?""",
+                    (query_id,),
+                ).fetchone()[0]
+                files_modified = conn.execute(
+                    """SELECT COUNT(DISTINCT json_extract(tool_input, '$.filepath'))
+                       FROM tool_calls
+                       WHERE query_id = ?
+                         AND tool_name IN ('Edit', 'Write', 'MultiEdit', 'NotebookEdit')""",
+                    (query_id,),
+                ).fetchone()[0]
+                conn.close()
+                response_tokens = max(1, total_output_bytes // 4) if total_output_bytes else None
+                tc.update_query_response(
+                    query_id, response_duration_ms=duration_ms,
+                    response_tokens_estimate=response_tokens, files_modified=files_modified,
+                )
         except Exception:
             pass
-        QUERY_START_FILE.unlink(missing_ok=True)
-
-    # Generate summary from git diff + session stats
-    import subprocess
-
+        try:
+            QUERY_START_FILE.unlink()
+        except FileNotFoundError:
+            pass
+    # Summary
     summary_parts = []
     try:
-        result = subprocess.run(
-            ["git", "diff", "--stat", "HEAD"],
-            capture_output=True,
-            text=True,
-            cwd=PROJECT_ROOT,
-            timeout=5,
-        )
+        result = subprocess.run(["git", "diff", "--stat", "HEAD"], capture_output=True, text=True, cwd=PROJECT_ROOT, timeout=5)
         if result.stdout.strip():
-            summary_parts.append(f"Changes: {result.stdout.strip().splitlines()[-1]}")
+            lines = result.stdout.strip().splitlines()
+            if lines:
+                summary_parts.append(f"Changes: {lines[-1]}")
     except Exception:
         pass
-
-    # Count commits made this session
-    # We can't easily know which commits were "this session" without a start marker
-    # so we just report total. A more precise approach would save HEAD at SessionStart.
-    try:
-        subprocess.run(
-            ["git", "rev-list", "--count", "HEAD"],
-            capture_output=True,
-            text=True,
-            cwd=PROJECT_ROOT,
-            timeout=5,
-        )
-    except Exception:
-        pass
-
     summary = " | ".join(summary_parts) if summary_parts else "Session ended."
-
-    tc.end_session(
-        session_id=session_id,
-        summary=summary,
-        exit_reason="normal",
-    )
+    tc.end_session(session_id=session_id, summary=summary, exit_reason="normal")
     _clear_session_id()
+    _clear_tool_call_id()
     return 0
-
-
-# ── CLI ──────────────────────────────────────────────────────────────────────
 
 
 def main() -> int:
     if len(sys.argv) < 2:
-        print("Usage: bridge.py <session-start|user-query|tool-call|session-end>", file=sys.stderr)
+        print("Usage: bridge.py <session-start|user-query|tool-call-start|tool-call-end|session-end>", file=sys.stderr)
         return 1
-
     command = sys.argv[1]
     payload = _read_stdin_json()
-
     handlers = {
         "session-start": cmd_session_start,
         "user-query": cmd_user_query,
-        "tool-call": cmd_tool_call,
+        "tool-call-start": cmd_tool_call_start,
+        "tool-call-end": cmd_tool_call_end,
+        "tool-call": cmd_tool_call_end,
         "session-end": cmd_session_end,
     }
-
     handler = handlers.get(command)
     if not handler:
         print(f"Unknown command: {command}", file=sys.stderr)
         return 1
-
     try:
         return handler(payload)
     except Exception as exc:
         print(f"bridge.py {command} failed: {exc}", file=sys.stderr)
-        return 0  # Don't block the agent on telemetry failures
+        return 0
 
 
 if __name__ == "__main__":

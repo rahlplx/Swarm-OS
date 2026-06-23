@@ -50,7 +50,34 @@ MAX_PROMPT_LENGTH = 65_536
 
 
 def _utc_now_iso() -> str:
+    """ISO-8601 UTC timestamp with milliseconds + 'Z' suffix."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+
+def _utc_now_sqlite() -> str:
+    """SQLite-compatible UTC timestamp: 'YYYY-MM-DD HH:MM:SS' (matches datetime('now'))."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _parse_timestamp(ts: str) -> Optional[datetime]:
+    """Parse a timestamp in either ISO-8601 or SQLite format. Returns timezone-aware datetime."""
+    if not ts:
+        return None
+    try:
+        cleaned = ts.rstrip("Z")
+        dt = datetime.fromisoformat(cleaned)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except Exception:
+        pass
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S.%f"):
+        try:
+            dt = datetime.strptime(ts, fmt)
+            return dt.replace(tzinfo=timezone.utc)
+        except Exception:
+            continue
+    return None
 
 
 def _estimate_tokens(text: str) -> int:
@@ -166,13 +193,15 @@ class TelemetryCollector:
         session_id = str(uuid.uuid4())
         branch = _git_branch()
         head_sha = _git_head_sha()
+        started_at = _utc_now_sqlite()
         with self._conn() as conn:
             conn.execute(
                 """INSERT INTO sessions
-                   (id, agent_type, agent_version, cwd, git_branch, git_head_sha)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
+                   (id, started_at, agent_type, agent_version, cwd, git_branch, git_head_sha)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 (
                     session_id,
+                    started_at,
                     agent_type,
                     agent_version,
                     cwd or str(PROJECT_ROOT),
@@ -181,6 +210,10 @@ class TelemetryCollector:
                 ),
             )
             conn.commit()
+        # Persist head_sha so end_session can count new commits
+        head_sha_file = self.db_path.parent / "session-start-sha"
+        head_sha_file.parent.mkdir(parents=True, exist_ok=True)
+        head_sha_file.write_text(head_sha or "")
         return session_id
 
     def end_session(
@@ -191,30 +224,28 @@ class TelemetryCollector:
         tasks_failed: int = 0,
         tests_run: int = 0,
         tests_passed: int = 0,
-        commits_made: int = 0,
+        commits_made: Optional[int] = None,
         exit_reason: str = "normal",
     ) -> None:
         """Mark a session as ended and record summary stats."""
         files_changed, lines_added, lines_removed = _git_diff_stats()
-        ended_at = _utc_now_iso()
+        ended_at = _utc_now_sqlite()
+
+        if commits_made is None:
+            commits_made = self._count_commits_since_session_start()
 
         with self._conn() as conn:
-            # Compute duration
             row = conn.execute(
                 "SELECT started_at FROM sessions WHERE id = ?",
                 (session_id,),
             ).fetchone()
             duration_seconds = None
             if row:
-                try:
-                    started = datetime.fromisoformat(
-                        row[0].replace("Z", "+00:00")
-                    )
+                started = _parse_timestamp(row[0])
+                if started:
                     duration_seconds = int(
                         (datetime.now(timezone.utc) - started).total_seconds()
                     )
-                except Exception:
-                    pass
 
             conn.execute(
                 """UPDATE sessions
@@ -250,6 +281,34 @@ class TelemetryCollector:
                     ),
                 )
             conn.commit()
+
+        head_sha_file = self.db_path.parent / "session-start-sha"
+        try:
+            head_sha_file.unlink()
+        except FileNotFoundError:
+            pass
+
+    def _count_commits_since_session_start(self) -> int:
+        """Count commits made between session-start HEAD and current HEAD."""
+        head_sha_file = self.db_path.parent / "session-start-sha"
+        if not head_sha_file.exists():
+            return 0
+        start_sha = head_sha_file.read_text().strip()
+        if not start_sha:
+            return 0
+        try:
+            result = subprocess.run(
+                ["git", "rev-list", "--count", f"{start_sha}..HEAD"],
+                capture_output=True,
+                text=True,
+                cwd=PROJECT_ROOT,
+                timeout=5,
+            )
+            if result.returncode == 0:
+                return int(result.stdout.strip())
+        except Exception:
+            pass
+        return 0
 
     # ── User queries ─────────────────────────────────────────────────────────
 
@@ -299,25 +358,31 @@ class TelemetryCollector:
         query_id: int,
         response_duration_ms: int,
         response_tokens_estimate: Optional[int] = None,
-        tool_calls_invoked: int = 0,
-        files_modified: int = 0,
+        tool_calls_invoked: Optional[int] = None,
+        files_modified: Optional[int] = None,
     ) -> None:
-        """Update a query row with response metadata after the AI finishes."""
+        """Update a query row with response metadata after the AI finishes.
+
+        Only updates fields that are not None — preserves existing values
+        for fields that were already set (e.g. tool_calls_invoked incremented
+        by start_tool_call).
+        """
         with self._conn() as conn:
+            sets = ["response_duration_ms = ?"]
+            params = [response_duration_ms]
+            if response_tokens_estimate is not None:
+                sets.append("response_tokens_estimate = ?")
+                params.append(response_tokens_estimate)
+            if tool_calls_invoked is not None:
+                sets.append("tool_calls_invoked = ?")
+                params.append(tool_calls_invoked)
+            if files_modified is not None:
+                sets.append("files_modified = ?")
+                params.append(files_modified)
+            params.append(query_id)
             conn.execute(
-                """UPDATE user_queries
-                   SET response_duration_ms = ?,
-                       response_tokens_estimate = ?,
-                       tool_calls_invoked = ?,
-                       files_modified = ?
-                   WHERE id = ?""",
-                (
-                    response_duration_ms,
-                    response_tokens_estimate,
-                    tool_calls_invoked,
-                    files_modified,
-                    query_id,
-                ),
+                f"UPDATE user_queries SET {', '.join(sets)} WHERE id = ?",
+                params,
             )
             conn.commit()
 
@@ -371,19 +436,16 @@ class TelemetryCollector:
 
     # ── Tool calls ───────────────────────────────────────────────────────────
 
-    def log_tool_call(
+    def start_tool_call(
         self,
         session_id: str,
         query_id: int,
         tool_name: str,
         tool_input: Optional[dict] = None,
-        output: Optional[str] = None,
-        output_type: str = "stdout",
-        success: bool = True,
-        error_message: Optional[str] = None,
-        duration_ms: Optional[int] = None,
     ) -> int:
-        """Log a tool call and its output. Returns the tool_call_id."""
+        """Record the start of a tool call (called from PreToolUse hook).
+        Returns the tool_call_id. Call end_tool_call() with the same id
+        once the tool completes to populate duration_ms + output + success."""
         with self._conn() as conn:
             row = conn.execute(
                 """SELECT COALESCE(MAX(call_number), 0) + 1
@@ -399,43 +461,129 @@ class TelemetryCollector:
             cur = conn.execute(
                 """INSERT INTO tool_calls
                    (session_id, query_id, call_number, tool_name, tool_input,
-                    duration_ms, success, error_message)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    timestamp, success)
+                   VALUES (?, ?, ?, ?, ?, ?, 1)""",
                 (
                     session_id,
                     query_id,
                     call_number,
                     tool_name,
                     tool_input_json,
-                    duration_ms,
-                    1 if success else 0,
-                    error_message,
+                    _utc_now_sqlite(),
+                ),
+            )
+            tool_call_id = cur.lastrowid
+
+            conn.execute(
+                "UPDATE sessions SET tool_call_count = tool_call_count + 1 WHERE id = ?",
+                (session_id,),
+            )
+            if query_id:
+                conn.execute(
+                    "UPDATE user_queries SET tool_calls_invoked = tool_calls_invoked + 1 WHERE id = ?",
+                    (query_id,),
+                )
+            conn.commit()
+        return tool_call_id
+
+    def end_tool_call(
+        self,
+        tool_call_id: int,
+        output: Optional[str] = None,
+        output_type: str = "stdout",
+        success: bool = True,
+        error_message: Optional[str] = None,
+    ) -> None:
+        """Record the completion of a tool call (called from PostToolUse hook).
+        Computes duration_ms from the tool_calls.timestamp column."""
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT timestamp FROM tool_calls WHERE id = ?",
+                (tool_call_id,),
+            ).fetchone()
+            duration_ms = None
+            if row:
+                started = _parse_timestamp(row[0])
+                if started:
+                    duration_ms = int(
+                        (datetime.now(timezone.utc) - started).total_seconds() * 1000
+                    )
+
+            conn.execute(
+                """UPDATE tool_calls
+                   SET duration_ms = ?, success = ?, error_message = ?
+                   WHERE id = ?""",
+                (duration_ms, 1 if success else 0, error_message, tool_call_id),
+            )
+
+            if output is not None:
+                output_truncated, was_truncated = _truncate(output, MAX_OUTPUT_LENGTH)
+                conn.execute(
+                    """INSERT INTO tool_outputs
+                       (tool_call_id, output_type, content, content_length, truncated)
+                       VALUES (?, ?, ?, ?, ?)""",
+                    (tool_call_id, output_type, output_truncated, len(output),
+                     1 if was_truncated else 0),
+                )
+            conn.commit()
+
+    def log_tool_call(
+        self,
+        session_id: str,
+        query_id: int,
+        tool_name: str,
+        tool_input: Optional[dict] = None,
+        output: Optional[str] = None,
+        output_type: str = "stdout",
+        success: bool = True,
+        error_message: Optional[str] = None,
+        duration_ms: Optional[int] = None,
+    ) -> int:
+        """Log a complete tool call in one shot (for manual/retroactive logging).
+        For real-time capture, prefer start_tool_call + end_tool_call."""
+        with self._conn() as conn:
+            row = conn.execute(
+                """SELECT COALESCE(MAX(call_number), 0) + 1
+                   FROM tool_calls WHERE session_id = ?""",
+                (session_id,),
+            ).fetchone()
+            call_number = row[0] if row else 1
+
+            tool_input_json = (
+                json.dumps(tool_input, default=str) if tool_input else None
+            )
+
+            cur = conn.execute(
+                """INSERT INTO tool_calls
+                   (session_id, query_id, call_number, tool_name, tool_input,
+                    timestamp, duration_ms, success, error_message)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    session_id, query_id, call_number, tool_name, tool_input_json,
+                    _utc_now_sqlite(), duration_ms, 1 if success else 0, error_message,
                 ),
             )
             tool_call_id = cur.lastrowid
 
             if output is not None:
-                output_truncated, was_truncated = _truncate(
-                    output, MAX_OUTPUT_LENGTH
-                )
+                output_truncated, was_truncated = _truncate(output, MAX_OUTPUT_LENGTH)
                 conn.execute(
                     """INSERT INTO tool_outputs
                        (tool_call_id, output_type, content, content_length, truncated)
                        VALUES (?, ?, ?, ?, ?)""",
-                    (
-                        tool_call_id,
-                        output_type,
-                        output_truncated,
-                        len(output),
-                        1 if was_truncated else 0,
-                    ),
+                    (tool_call_id, output_type, output_truncated, len(output),
+                     1 if was_truncated else 0),
                 )
 
-            # Increment session tool_call_count
             conn.execute(
                 "UPDATE sessions SET tool_call_count = tool_call_count + 1 WHERE id = ?",
                 (session_id,),
             )
+            if query_id:
+                conn.execute(
+                    "UPDATE user_queries SET tool_calls_invoked = tool_calls_invoked + 1 WHERE id = ?",
+                    (query_id,),
+                )
             conn.commit()
         return tool_call_id
 
