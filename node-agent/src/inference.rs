@@ -39,10 +39,14 @@ pub async fn infer(
 /// VRAM headroom required per model size + quantization (research.md benchmarks).
 /// Returns safe headroom in GiB (warm load + activation buffer).
 pub fn vram_headroom_gib(model_params: u64, quant: &str) -> f32 {
+    // Headroom values from research.md benchmarks + guide.md appendix.
+    // "Safe headroom" = warm VRAM usage + activation buffer.
     match (model_params, quant) {
         (p, "Q4_K_M") if (7_000_000_000..=7_999_999_999).contains(&p) => 5.20,
         (p, "Q5_K_M") if (7_000_000_000..=7_999_999_999).contains(&p) => 6.00,
         (p, "Q8_0")   if (7_000_000_000..=7_999_999_999).contains(&p) => 9.50,
+        // 13B Llama-2 Q4_K_M: warm 8.11 GiB, headroom 9.50 GiB (guide.md appendix)
+        (p, "Q4_K_M") if (13_000_000_000..=13_999_999_999).contains(&p) => 9.50,
         (p, "Q4_K_M") if (70_000_000_000..=70_999_999_999).contains(&p) => 48.00,
         (p, "Q5_K_M") if (70_000_000_000..=70_999_999_999).contains(&p) => 60.00,
         _ => 0.0,
@@ -89,8 +93,15 @@ mod tests {
     }
 
     #[test]
+    fn vram_headroom_13b_q4km() {
+        // 13B Llama-2 Q4_K_M: guide.md appendix — warm 8.11 GiB, headroom 9.50 GiB
+        assert_eq!(vram_headroom_gib(13_000_000_000, "Q4_K_M"), 9.50);
+    }
+
+    #[test]
     fn vram_headroom_unknown_returns_zero() {
-        assert_eq!(vram_headroom_gib(13_000_000_000, "Q4_K_M"), 0.0);
+        // 15B is not in the table — should return 0.0 to indicate "unknown, check manually"
+        assert_eq!(vram_headroom_gib(15_000_000_000, "Q4_K_M"), 0.0);
     }
 
     #[test]

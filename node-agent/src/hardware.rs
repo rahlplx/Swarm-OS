@@ -9,7 +9,7 @@ pub struct NodeCapabilities {
     pub vram_total_gib: Option<f32>,
     pub vram_free_gib: Option<f32>,
     pub backend: InferenceBackend,
-    pub capability_score: f32,
+    // No capability_score field — call capability_score(&caps) as the single source of truth
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -26,14 +26,14 @@ pub fn detect_capabilities() -> NodeCapabilities {
     todo!("implement via sysinfo + nvml-wrapper crates")
 }
 
-/// Two-phase scheduler scoring formula from architecture.md §3:
-/// vram×4 + ram×0.5 + cpu×0.25 + backend_bonus
+/// Two-phase scheduler scoring formula — canonical values from architecture.md §3:
+/// vram×4 + ram×0.5 + cpu×0.25 + backend_bonus (cuda=10/metal=8/vulkan=5/cpu=0)
 pub fn capability_score(caps: &NodeCapabilities) -> f32 {
     let vram = caps.vram_total_gib.unwrap_or(0.0);
     let backend_bonus: f32 = match caps.backend {
-        InferenceBackend::Cuda => 20.0,
-        InferenceBackend::Metal => 15.0,
-        InferenceBackend::Vulkan => 10.0,
+        InferenceBackend::Cuda => 10.0,
+        InferenceBackend::Metal => 8.0,
+        InferenceBackend::Vulkan => 5.0,
         InferenceBackend::CpuOnly => 0.0,
     };
     (vram * 4.0) + (caps.ram_total_gib * 0.5) + (caps.cpu_cores as f32 * 0.25) + backend_bonus
@@ -57,22 +57,19 @@ mod tests {
             vram_total_gib: vram_gib,
             vram_free_gib: vram_gib.map(|v| v * 0.85),
             backend,
-            capability_score: 0.0,
         }
     }
 
     #[test]
     fn score_rtx4090_node() {
-        // RTX 4090 (24 GiB VRAM), 32 GiB RAM, 8 cores, CUDA
-        // (24×4) + (32×0.5) + (8×0.25) + 20 = 96 + 16 + 2 + 20 = 134
+        // (24×4) + (32×0.5) + (8×0.25) + 10 = 96 + 16 + 2 + 10 = 124
         let caps = make_caps(8, 32.0, Some(24.0), InferenceBackend::Cuda);
         let score = capability_score(&caps);
-        assert!((score - 134.0).abs() < 0.01, "score={score}, expected 134");
+        assert!((score - 124.0).abs() < 0.01, "score={score}, expected 124");
     }
 
     #[test]
     fn score_cpu_only_node() {
-        // 4 cores, 8 GiB RAM, no GPU
         // (0×4) + (8×0.5) + (4×0.25) + 0 = 0 + 4 + 1 + 0 = 5
         let caps = make_caps(4, 8.0, None, InferenceBackend::CpuOnly);
         let score = capability_score(&caps);
@@ -81,11 +78,11 @@ mod tests {
 
     #[test]
     fn score_apple_m3_max() {
-        // M3 Max (unified 48 GiB, but Metal backend), 8 perf cores
-        // (48×4) + (48×0.5) + (8×0.25) + 15 = 192 + 24 + 2 + 15 = 233
+        // M3 Max (unified 48 GiB, Metal backend), 8 perf cores
+        // (48×4) + (48×0.5) + (8×0.25) + 8 = 192 + 24 + 2 + 8 = 226
         let caps = make_caps(8, 48.0, Some(48.0), InferenceBackend::Metal);
         let score = capability_score(&caps);
-        assert!((score - 233.0).abs() < 0.01, "score={score}, expected 233");
+        assert!((score - 226.0).abs() < 0.01, "score={score}, expected 226");
     }
 
     #[test]

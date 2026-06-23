@@ -14,7 +14,11 @@ Swarm-OS is a decentralized P2P AI inference network where contributors pool idl
 
 | File | Type | Authority For | Phase | ~Tokens | Description |
 |------|------|---------------|-------|---------|-------------|
-| [CLAUDE.md](/CLAUDE) | context | ai_onboarding | 0-4 | 1,900 | AI assistant context for Claude Code |
+| [CLAUDE.md](/CLAUDE) | context | ai_onboarding | 0-4 | 1,900 | AI assistant context for Claude Code (canonical onboarding doc) |
+| [AGENTS.md](/AGENTS) | context | ai_onboarding_cross_tool | 0-4 | 1,200 | Cross-tool agent onboarding (Cursor, Aider, etc.); defers to CLAUDE.md for Claude Code |
+| [.claude/memory/PROJECT.md](/.claude/memory/PROJECT) | memory | project_state, decisions, invariants, progress | 0-4 | 1,500 | Persistent cross-session memory — read FIRST every session |
+| [.claude/rules/INVARIANTS.md](/.claude/rules/INVARIANTS) | rules | security_invariants, ledger_invariants, license_invariants | 0-4 | 1,800 | Hard rules extracted from governance + architecture §7 + tech_stack — never violate |
+| [.claude/rules/SESSION_PROTOCOL.md](/.claude/rules/SESSION_PROTOCOL) | rules | session_bootstrap, operating_protocol, auto_trigger | 0-4 | 1,200 | Session startup checklist + cross-session auto-trigger config |
 | [project.md](/project) | spec | product_identity, feature_list, bd_market_context, success_metrics | 0-4 | 3,000 | Product identity, features F1-F9, phase roadmap, BD market |
 | [architecture.md](/architecture) | spec | system_layers, scheduler_algorithm, pipeline_ring_topology, activation_tensor_sizes, security_model, failure_modes | 0-4 | 5,600 | System diagram, Blackboard, scheduler/router, sharding, security |
 | [tech_stack.md](/tech_stack) | reference | oss_dependencies, dependency_map, model_support_matrix, build_toolchain, license_constraints | 0-4 | 4,300 | OSS deps with licenses, dependency map, build toolchain |

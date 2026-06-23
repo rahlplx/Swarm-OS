@@ -8,9 +8,9 @@ from typing import AsyncIterator
 
 LITELLM_MIN_VERSION = "1.82.0"
 
-# Capability score formula from architecture.md §3 (canonical):
-# vram*4 + ram*0.5 + cpu*0.25 + backend_bonus
-BACKEND_BONUS = {"cuda": 20.0, "metal": 15.0, "vulkan": 10.0, "cpu": 0.0}
+# Canonical backend bonus values from architecture.md §3:
+# cuda=10 / metal=8 / vulkan=5 / cpu=0
+BACKEND_BONUS = {"cuda": 10.0, "metal": 8.0, "vulkan": 5.0, "cpu": 0.0}
 
 
 def capability_score(
@@ -19,7 +19,9 @@ def capability_score(
     cpu_cores: int,
     backend: str,
 ) -> float:
-    bonus = BACKEND_BONUS.get(backend.lower(), 0.0)
+    """Score formula: vram×4 + ram×0.5 + cpu×0.25 + backend_bonus (architecture.md §3)."""
+    normalized = str(backend).strip().lower() if backend is not None else "cpu"
+    bonus = BACKEND_BONUS.get(normalized, 0.0)
     return (vram_gib * 4.0) + (ram_gib * 0.5) + (cpu_cores * 0.25) + bonus
 
 
@@ -37,4 +39,5 @@ class SwarmRouter:
         stream: bool = False,
         temperature: float = 0.7,
     ) -> dict | AsyncIterator[dict]:
+        """Route OpenAI-compatible chat request to local llama.cpp inference engine."""
         raise NotImplementedError("Phase 0 implementation pending — wire to llama.cpp /v1/chat/completions")

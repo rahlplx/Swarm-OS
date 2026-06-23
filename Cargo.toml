@@ -1,5 +1,5 @@
 [workspace]
-members = ["node-agent"]
+members = ["node-agent", "src-tauri"]
 resolver = "2"
 
 [profile.release]
@@ -7,3 +7,4 @@ lto = true
 strip = true
 opt-level = "z"
 codegen-units = 1
+panic = "abort"
