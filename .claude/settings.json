@@ -1,10 +1,25 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "bash scripts/hooks/on-session-start.sh",
+        "timeout": 15000
+      }
+    ],
     "UserPromptSubmit": [
       {
         "type": "command",
         "command": "bash scripts/hooks/on-prompt.sh",
         "timeout": 15000
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^(Bash|Edit|Write|NotebookEdit|MultiEdit)$",
+        "type": "command",
+        "command": "bash scripts/hooks/on-code-change.sh",
+        "timeout": 30000
       }
     ],
     "Stop": [
@@ -13,6 +28,17 @@
         "command": "bash scripts/hooks/on-session-end.sh",
         "timeout": 120000
       }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(bash scripts/hooks/*:*)",
+      "Bash(cargo:*)",
+      "Bash(pnpm:*)",
+      "Bash(python3:*)",
+      "Bash(ruff:*)",
+      "Bash(pytest:*)",
+      "Bash(git:*)"
     ]
   }
 }

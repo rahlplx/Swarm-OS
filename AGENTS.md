@@ -44,10 +44,19 @@ When information appears in multiple docs, the authoritative source wins. See [`
 
 ## Operating Protocol (all agents)
 
+### Session Bootstrap (mandatory — do this FIRST)
+Read these files in order before responding to any user prompt:
+
+1. **`.claude/memory/PROJECT.md`** — persistent state, decisions, invariants, progress
+2. **`.claude/rules/INVARIANTS.md`** — hard rules that must never be violated (security, ledger, license)
+3. **`.claude/rules/SESSION_PROTOCOL.md`** — session bootstrap checklist + operating protocol
+4. **`CLAUDE.md`** (even if you're not Claude — it's the most detailed onboarding doc)
+5. **`log.md`** — recent changes that may affect your work
+
 ### Before writing code
-1. Read `CLAUDE.md` (even if you're not Claude — it's the most detailed onboarding doc).
-2. Read `index.md` to find the authoritative source for any concept you're touching.
-3. Check `log.md` for recent changes that may affect your work.
+1. Read `index.md` to find the authoritative source for any concept you're touching.
+2. Check `log.md` for recent changes that may affect your work.
+3. Check `.claude/memory/PROJECT.md` §9 (Open Questions / Deferred Items) for known blockers.
 
 ### Verification gate (mandatory)
 Do not mark a task DONE until:

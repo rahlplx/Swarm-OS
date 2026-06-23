@@ -13,6 +13,19 @@ token_estimate: 1900
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Session Bootstrap (mandatory — do this FIRST)
+
+Before responding to any user prompt, read these files in order:
+
+1. **`.claude/memory/PROJECT.md`** — persistent state, decisions, invariants, progress
+2. **`.claude/rules/INVARIANTS.md`** — hard rules that must never be violated (security, ledger, license)
+3. **`.claude/rules/SESSION_PROTOCOL.md`** — session bootstrap checklist + operating protocol
+4. **`log.md`** — recent changes that may affect your work
+
+The `SessionStart` hook (`.claude/settings.json` → `scripts/hooks/on-session-start.sh`) auto-emits a banner with this checklist + a state snapshot on every new session. If you don't see the banner, run the hook manually: `bash scripts/hooks/on-session-start.sh`.
+
+For non-Claude agents (Cursor, Aider, etc.), read `AGENTS.md` instead of this file.
+
 ## Project Overview
 
 Swarm-OS is a decentralized P2P AI inference network. Contributors pool idle GPU/CPU compute into a WireGuard mesh; consumers run 7B–405B models via an OpenAI-compatible API. A tamper-evident credit ledger tracks earn/spend. Made in Bangladesh (BDT payments via SSLCommerz/bKash), Apache 2.0.
