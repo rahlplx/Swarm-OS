@@ -10,6 +10,11 @@
         "type": "command",
         "command": "bash scripts/hooks/on-session-start.sh",
         "timeout": 15000
+      },
+      {
+        "type": "command",
+        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh",
+        "timeout": 300000
       }
     ],
     "UserPromptSubmit": [
@@ -22,6 +27,11 @@
         "type": "command",
         "command": "bash scripts/hooks/on-prompt.sh",
         "timeout": 15000
+      },
+      {
+        "type": "command",
+        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/query-counter.sh",
+        "timeout": 60000
       }
     ],
     "PostToolUse": [
@@ -49,17 +59,6 @@
         "command": "bash scripts/hooks/on-session-end.sh",
         "timeout": 120000
       }
-    ]
-  },
-  "permissions": {
-    "allow": [
-      "Bash(python3:*)",
-      "Bash(bash scripts/hooks/*:*)",
-      "Bash(cargo:*)",
-      "Bash(pnpm:*)",
-      "Bash(ruff:*)",
-      "Bash(pytest:*)",
-      "Bash(git:*)"
     ]
   }
 }
