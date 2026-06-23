@@ -3,6 +3,11 @@
     "SessionStart": [
       {
         "type": "command",
+        "command": "python3 scripts/hooks/bridge.py session-start",
+        "timeout": 15000
+      },
+      {
+        "type": "command",
         "command": "bash scripts/hooks/on-session-start.sh",
         "timeout": 15000
       }
@@ -10,11 +15,22 @@
     "UserPromptSubmit": [
       {
         "type": "command",
+        "command": "python3 scripts/hooks/bridge.py user-query",
+        "timeout": 15000
+      },
+      {
+        "type": "command",
         "command": "bash scripts/hooks/on-prompt.sh",
         "timeout": 15000
       }
     ],
     "PostToolUse": [
+      {
+        "matcher": "^(Bash|Edit|Write|NotebookEdit|MultiEdit|Read|Grep|Glob|Task)$",
+        "type": "command",
+        "command": "python3 scripts/hooks/bridge.py tool-call",
+        "timeout": 30000
+      },
       {
         "matcher": "^(Bash|Edit|Write|NotebookEdit|MultiEdit)$",
         "type": "command",
@@ -25,6 +41,11 @@
     "Stop": [
       {
         "type": "command",
+        "command": "python3 scripts/hooks/bridge.py session-end",
+        "timeout": 30000
+      },
+      {
+        "type": "command",
         "command": "bash scripts/hooks/on-session-end.sh",
         "timeout": 120000
       }
@@ -32,10 +53,10 @@
   },
   "permissions": {
     "allow": [
+      "Bash(python3:*)",
       "Bash(bash scripts/hooks/*:*)",
       "Bash(cargo:*)",
       "Bash(pnpm:*)",
-      "Bash(python3:*)",
       "Bash(ruff:*)",
       "Bash(pytest:*)",
       "Bash(git:*)"
