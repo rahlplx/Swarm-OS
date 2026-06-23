@@ -165,18 +165,22 @@ PYEOF
 
 # ── 4. Install stitch-skills into .claude/skills/ ────────────────────────────
 info "Installing stitch-skills (google-labs-code)..."
-SKILLS_DEST="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "")/.claude/skills"
-if [[ -n "$SKILLS_DEST" ]]; then
+REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "")"
+if [[ -n "$REPO_ROOT" ]]; then
+    SKILLS_DEST="$REPO_ROOT/.claude/skills"
     mkdir -p "$SKILLS_DEST"
     SKILLS_TMP="$(mktemp -d)"
-    git clone --depth=1 https://github.com/google-labs-code/stitch-skills.git "$SKILLS_TMP" 2>/dev/null
-    find "$SKILLS_TMP" -name "SKILL.md" | while read f; do
-        skill_name=$(basename "$(dirname "$f")")
-        cp "$f" "$SKILLS_DEST/${skill_name}.md"
-    done
+    if git clone --depth=1 https://github.com/google-labs-code/stitch-skills.git "$SKILLS_TMP" 2>/dev/null; then
+        find "$SKILLS_TMP" -name "SKILL.md" | while read -r f; do
+            skill_name=$(basename "$(dirname "$f")")
+            cp "$f" "$SKILLS_DEST/${skill_name}.md"
+        done
+        skill_count=$(ls "$SKILLS_DEST"/*.md 2>/dev/null | wc -l)
+        info "Installed $skill_count stitch skills → $SKILLS_DEST"
+    else
+        warn "git clone of stitch-skills failed — check network and retry"
+    fi
     rm -rf "$SKILLS_TMP"
-    skill_count=$(ls "$SKILLS_DEST"/*.md 2>/dev/null | wc -l)
-    info "Installed $skill_count stitch skills → $SKILLS_DEST"
 else
     warn "Could not determine git repo root — skipping stitch-skills install"
 fi
