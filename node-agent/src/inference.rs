@@ -3,7 +3,6 @@ use tokio::sync::mpsc;
 
 /// Phase 0 single-device inference via llama-cpp-2 (utilityai crate).
 /// llama-rs (rustformers) is ARCHIVED — do not use.
-
 pub struct ModelHandle {
     pub model_path: std::path::PathBuf,
     pub context_size: u32,
@@ -23,15 +22,15 @@ pub struct TokenDelta {
 
 /// Load a GGUF model. Returns a handle for subsequent inference calls.
 /// Phase 0 constraint: Metal backend enforces METAL_MAX_CONTEXT limit.
-pub async fn load_model(path: &Path, context_size: u32) -> anyhow::Result<ModelHandle> {
+pub async fn load_model(_path: &Path, _context_size: u32) -> anyhow::Result<ModelHandle> {
     todo!("implement via llama-cpp-2 crate (utilityai/llama-cpp-2)")
 }
 
 /// Run streaming inference; each token is sent on `tx`.
 pub async fn infer(
-    handle: &ModelHandle,
-    req: InferenceRequest,
-    tx: mpsc::Sender<TokenDelta>,
+    _handle: &ModelHandle,
+    _req: InferenceRequest,
+    _tx: mpsc::Sender<TokenDelta>,
 ) -> anyhow::Result<()> {
     todo!("implement streaming generation loop via llama_decode + llama_get_logits_ith")
 }
@@ -44,7 +43,7 @@ pub fn vram_headroom_gib(model_params: u64, quant: &str) -> f32 {
     match (model_params, quant) {
         (p, "Q4_K_M") if (7_000_000_000..=7_999_999_999).contains(&p) => 5.20,
         (p, "Q5_K_M") if (7_000_000_000..=7_999_999_999).contains(&p) => 6.00,
-        (p, "Q8_0")   if (7_000_000_000..=7_999_999_999).contains(&p) => 9.50,
+        (p, "Q8_0") if (7_000_000_000..=7_999_999_999).contains(&p) => 9.50,
         // 13B Llama-2 Q4_K_M: warm 8.11 GiB, headroom 9.50 GiB (guide.md appendix)
         (p, "Q4_K_M") if (13_000_000_000..=13_999_999_999).contains(&p) => 9.50,
         (p, "Q4_K_M") if (70_000_000_000..=70_999_999_999).contains(&p) => 48.00,
@@ -60,10 +59,10 @@ pub const METAL_MAX_CONTEXT: u32 = 8192;
 /// llama.cpp HTTP error codes (from research.md §1.1 HTTP Server Error Codes).
 #[derive(Debug, PartialEq)]
 pub enum LlamaHttpError {
-    BadRequest,          // 400 — invalid JSON payload
-    ContextExceeded,     // 422 — context length > configured window
-    OomOrGpuFailure,     // 500 — VRAM exhaustion or driver timeout
-    QueueFull,           // 503 — request queue capacity exceeded
+    BadRequest,      // 400 — invalid JSON payload
+    ContextExceeded, // 422 — context length > configured window
+    OomOrGpuFailure, // 500 — VRAM exhaustion or driver timeout
+    QueueFull,       // 503 — request queue capacity exceeded
 }
 
 impl LlamaHttpError {
@@ -111,10 +110,22 @@ mod tests {
 
     #[test]
     fn llama_http_error_mapping() {
-        assert_eq!(LlamaHttpError::from_status(400), Some(LlamaHttpError::BadRequest));
-        assert_eq!(LlamaHttpError::from_status(422), Some(LlamaHttpError::ContextExceeded));
-        assert_eq!(LlamaHttpError::from_status(500), Some(LlamaHttpError::OomOrGpuFailure));
-        assert_eq!(LlamaHttpError::from_status(503), Some(LlamaHttpError::QueueFull));
+        assert_eq!(
+            LlamaHttpError::from_status(400),
+            Some(LlamaHttpError::BadRequest)
+        );
+        assert_eq!(
+            LlamaHttpError::from_status(422),
+            Some(LlamaHttpError::ContextExceeded)
+        );
+        assert_eq!(
+            LlamaHttpError::from_status(500),
+            Some(LlamaHttpError::OomOrGpuFailure)
+        );
+        assert_eq!(
+            LlamaHttpError::from_status(503),
+            Some(LlamaHttpError::QueueFull)
+        );
         assert_eq!(LlamaHttpError::from_status(200), None);
     }
 

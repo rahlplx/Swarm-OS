@@ -4,7 +4,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 /// Phase 0 telemetry: in-process counters. Phase 1+ exports to Prometheus.
 /// Custom metrics per architecture.md §F7:
 ///   swarm_tokens_per_second, swarm_node_vram_used, swarm_job_queue_depth
-
 static TOKENS_GENERATED: AtomicU64 = AtomicU64::new(0);
 static INFERENCE_REQUESTS: AtomicU64 = AtomicU64::new(0);
 static INFERENCE_ERRORS: AtomicU64 = AtomicU64::new(0);
