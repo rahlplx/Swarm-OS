@@ -58,7 +58,7 @@ jobs:
         run: pnpm test
 
   python:
-    name: Python (ruff + pytest)
+    name: Python — litellm-proxy (ruff + pytest)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -71,6 +71,27 @@ jobs:
 
       - name: Install dependencies
         run: pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Tests
+        run: pytest tests/ -v
+
+  gateway:
+    name: Python — gateway (ruff + pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gateway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -e ".[test]"
 
       - name: Lint
         run: ruff check .

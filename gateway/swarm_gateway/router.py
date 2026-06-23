@@ -40,4 +40,6 @@ class SwarmRouter:
         temperature: float = 0.7,
     ) -> dict | AsyncIterator[dict]:
         """Route OpenAI-compatible chat request to local llama.cpp inference engine."""
-        raise NotImplementedError("Phase 0 implementation pending — wire to llama.cpp /v1/chat/completions")
+        raise NotImplementedError(
+            "Phase 0 implementation pending — wire to llama.cpp /v1/chat/completions"
+        )
