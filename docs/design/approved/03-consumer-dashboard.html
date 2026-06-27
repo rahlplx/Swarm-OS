@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swarm-OS — Consumer Dashboard</title>
+<style>
+  :root{--p:#B8C9FF;--op:#002E6A;--pc:#004593;--opc:#D6E3FF;--s:#C0C6DD;--os:#2C3249;--sc:#42485F;--osc:#DCE2F9;--err:#FFB4AB;--oerr:#690005;--errc:#93000A;--oeerrc:#FFDAD6;--bg:#0B1120;--obg:#E2E2E9;--sf:#111827;--osf:#E2E2E9;--sfv:#1F2937;--osfv:#C3C5D0;--ol:#8D9099;--olv:#44474E;--scl:#161D2E;--sc2:#1C2536;--sch:#242E40;--schst:#2C3749;--inv:#E2E2E9;--oinv:#2E3036;--ok:#A8DAB5;--okc:#1B5E3A;--wn:#FFCC80;--wnc:#7A5800;--aa:#FFB800;--ar:#FF4D4D;--at:#00C4B4;--rxl:28px;--rlg:16px;--rmd:12px;--rsm:8px;--rxs:4px}
+  @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Google Sans',-apple-system,sans-serif;background:var(--bg);color:var(--obg);min-height:100vh}
+  .top-bar{position:fixed;top:0;left:0;right:0;height:64px;background:var(--sf);border-bottom:1px solid var(--olv);display:flex;align-items:center;padding:0 16px;z-index:100}
+  .top-bar h1{font-size:20px;font-weight:500;color:var(--osf)}
+  .top-bar .sep{font-size:14px;color:var(--ol);margin:0 12px}
+  .main{padding:88px 32px 32px;max-width:1400px;margin:0 auto}
+  .card{background:var(--sc2);border-radius:var(--rxl);border:1px solid var(--olv);overflow:hidden;margin-bottom:24px}
+  .card-h{padding:20px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--olv)}
+  .card-h h3{font-size:16px;font-weight:500;color:var(--osf)}
+  .card-b{padding:24px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px}
+  .badge{padding:4px 12px;border-radius:99px;font-size:12px;font-weight:500}
+  .badge-ok{background:color-mix(in srgb,var(--okc) 40%,transparent);color:var(--ok)}
+  .badge-wn{background:color-mix(in srgb,var(--wnc) 40%,transparent);color:var(--wn)}
+  .badge-p{background:color-mix(in srgb,var(--pc) 40%,transparent);color:var(--p)}
+  .badge-ol{border:1px solid var(--ol);color:var(--ol)}
+  .btn{padding:10px 24px;border-radius:var(--rxl);font-size:14px;font-weight:500;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+  .btn-f{background:var(--p);color:var(--op)}
+  .btn-t{background:var(--sc);color:var(--osc)}
+  .btn-o{background:transparent;color:var(--p);border:1px solid var(--ol)}
+  .btn-d{background:var(--errc);color:var(--oeerrc)}
+  .btn-i{width:36px;height:36px;border-radius:50%;border:none;background:transparent;color:var(--osfv);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+  .btn-i:hover{background:var(--sch)}
+  .api-key-row{display:flex;align-items:center;gap:16px;padding:16px;background:var(--scl);border-radius:var(--rmd);margin-bottom:8px}
+  .api-key-name{font-size:14px;font-weight:500;color:var(--osf);min-width:120px}
+  .api-key-hash{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ol);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .api-key-meta{font-size:12px;color:var(--ol);min-width:200px;text-align:right}
+  .usage-bar{height:4px;background:var(--schst);border-radius:99px;overflow:hidden;margin-top:8px}
+  .usage-fill{height:100%;border-radius:99px}
+  .usage-fill.low{background:var(--ok)}
+  .usage-fill.med{background:var(--wn)}
+  .usage-fill.high{background:var(--ar)}
+  .stat-box{padding:24px;background:var(--scl);border-radius:var(--rlg)}
+  .stat-box-label{font-size:12px;color:var(--ol);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}
+  .stat-box-value{font-size:32px;font-weight:500;line-height:1}
+  .stat-box-sub{font-size:12px;color:var(--ol);margin-top:4px}
+  .model-select{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+  .model-option{padding:16px;background:var(--scl);border:2px solid transparent;border-radius:var(--rmd);cursor:pointer;transition:all 0.2s}
+  .model-option.selected{border-color:var(--p);background:color-mix(in srgb,var(--pc) 15%,var(--scl))}
+  .model-option:hover{border-color:var(--olv)}
+  .model-name{font-size:14px;font-weight:500;color:var(--osf);margin-bottom:4px}
+  .model-meta{font-size:12px;color:var(--ol)}
+  .code-block{background:var(--sch);border-radius:var(--rmd);padding:16px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--obg);overflow-x:auto;line-height:1.6}
+  .code-block .kw{color:#C792EA}
+  .code-block .str{color:#C3E88D}
+  .code-block .cmt{color:#546E7A}
+  .code-block .fn{color:#82AAFF}
+  .code-block .num{color:#F78C6C}
+  .tab-bar{display:flex;gap:0;border-bottom:1px solid var(--olv);margin-bottom:20px}
+  .tab{padding:12px 20px;font-size:14px;font-weight:500;color:var(--ol);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s}
+  .tab.active{color:var(--p);border-bottom-color:var(--p)}
+  .tab:hover:not(.active){color:var(--osfv)}
+  .metric-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--olv)}
+  .metric-row:last-child{border:none}
+  .metric-l{font-size:14px;color:var(--osfv)}
+  .metric-v{font-size:14px;font-weight:500;color:var(--osf)}
+</style>
+</head>
+<body>
+  <header class="top-bar">
+    <h1>Swarm-OS</h1>
+    <span class="sep">/ Consumer Dashboard</span>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+      <span class="badge badge-ok">&#9679; Online</span>
+      <span style="font-size:14px;color:var(--osf)">arif@dev.bd</span>
+      <button class="btn-i" style="font-size:12px">&#128100;</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- Credit Balance Hero -->
+    <div style="background:linear-gradient(135deg,var(--pc),var(--sc2));border-radius:var(--rxl);padding:32px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;border:1px solid var(--olv)">
+      <div>
+        <div style="font-size:14px;color:var(--ol);margin-bottom:8px">Available Credits</div>
+        <div style="font-size:56px;font-weight:500;color:var(--p);line-height:1">4,832<span style="font-size:20px;color:var(--ol);margin-left:8px">cr</span></div>
+        <div style="font-size:13px;color:var(--ol);margin-top:8px">Offline wallet: 350 cr available &middot; Last sync: 4 min ago</div>
+      </div>
+      <div style="display:flex;gap:12px">
+        <button class="btn btn-t">&#128179; Top Up (BDT)</button>
+        <button class="btn btn-o">&#128203; View Ledger</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid3">
+      <div class="stat-box">
+        <div class="stat-box-label">Tokens Used Today</div>
+        <div class="stat-box-value" style="color:var(--p)">148K</div>
+        <div class="stat-box-sub">Input: 42K &middot; Output: 106K</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-label">Cost Today</div>
+        <div class="stat-box-value" style="color:var(--aa)">892<span style="font-size:14px;color:var(--ol);margin-left:4px">cr</span></div>
+        <div class="stat-box-sub">Rate: 0.006 input + 0.01 output per token</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-label">Active API Keys</div>
+        <div class="stat-box-value" style="color:var(--ok)">3</div>
+        <div class="stat-box-sub">All keys operational</div>
+      </div>
+    </div>
+
+    <!-- API Keys -->
+    <div class="card">
+      <div class="card-h">
+        <h3>API Keys</h3>
+        <button class="btn btn-f">&#43; Create Key</button>
+      </div>
+      <div class="card-b">
+        <div class="api-key-row">
+          <span class="api-key-name">Production</span>
+          <span class="api-key-hash">swrm_sk_7f3a...d8e2</span>
+          <span class="badge badge-ok">Active</span>
+          <span class="api-key-meta">Used 12.4K times &middot; Last: 2 min ago</span>
+          <button class="btn-i" title="Copy">&#128203;</button>
+          <button class="btn-i" title="Revoke" style="color:var(--ar)">&#128465;</button>
+        </div>
+        <div class="api-key-row">
+          <span class="api-key-name">Testing</span>
+          <span class="api-key-hash">swrm_sk_9b2c...f1a4</span>
+          <span class="badge badge-ok">Active</span>
+          <span class="api-key-meta">Used 342 times &middot; Last: 1 hour ago</span>
+          <button class="btn-i" title="Copy">&#128203;</button>
+          <button class="btn-i" title="Revoke" style="color:var(--ar)">&#128465;</button>
+        </div>
+        <div class="api-key-row">
+          <span class="api-key-name">Staging</span>
+          <span class="api-key-hash">swrm_sk_4e8d...c7b3</span>
+          <span class="badge badge-wn">Low Balance</span>
+          <span class="api-key-meta">Used 89 times &middot; Last: 3 days ago</span>
+          <button class="btn-i" title="Copy">&#128203;</button>
+          <button class="btn-i" title="Revoke" style="color:var(--ar)">&#128465;</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <!-- Usage Breakdown -->
+      <div class="card">
+        <div class="card-h"><h3>Usage Breakdown (7d)</h3></div>
+        <div class="card-b">
+          <div class="tab-bar">
+            <div class="tab active">By Model</div>
+            <div class="tab">By Day</div>
+            <div class="tab">By Key</div>
+          </div>
+          <div class="metric-row">
+            <span class="metric-l">llama-3.1-70b</span>
+            <div style="flex:1;margin:0 16px">
+              <div class="usage-bar"><div class="usage-fill high" style="width:68%"></div></div>
+            </div>
+            <span class="metric-v">68%</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-l">llama-3.1-8b</span>
+            <div style="flex:1;margin:0 16px">
+              <div class="usage-bar"><div class="usage-fill med" style="width:24%"></div></div>
+            </div>
+            <span class="metric-v">24%</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-l">mistral-7b</span>
+            <div style="flex:1;margin:0 16px">
+              <div class="usage-bar"><div class="usage-fill low" style="width:8%"></div></div>
+            </div>
+            <span class="metric-v">8%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Start Code -->
+      <div class="card">
+        <div class="card-h"><h3>Quick Start</h3></div>
+        <div class="card-b">
+          <div style="font-size:14px;color:var(--osfv);margin-bottom:12px">Drop-in replacement for OpenAI SDK</div>
+          <div class="code-block"><span class="kw">from</span> openai <span class="kw">import</span> OpenAI
+
+client = OpenAI(
+    api_key=<span class="str">"swrm_sk_7f3a...d8e2"</span>,
+    base_url=<span class="str">"https://api.swarm-os.dev/v1"</span>
+)
+
+response = client.chat.completions.create(
+    model=<span class="str">"llama-3.1-70b"</span>,
+    messages=[{
+        <span class="str">"role"</span>: <span class="str">"user"</span>,
+        <span class="str">"content"</span>: <span class="str">"Hello from Bangladesh!"</span>
+    }],
+    stream=<span class="kw">True</span>
+)
+
+<span class="kw">for</span> chunk <span class="kw">in</span> response:
+    <span class="fn">print</span>(chunk.choices[<span class="num">0</span>].delta.content, end=<span class="str">""</span>)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Models Available -->
+    <div class="card">
+      <div class="card-h">
+        <h3>Available Models</h3>
+        <span style="font-size:13px;color:var(--ol)">Click to view details</span>
+      </div>
+      <div class="card-b">
+        <div class="model-select">
+          <div class="model-option selected">
+            <div class="model-name">llama-3.1-70b</div>
+            <div class="model-meta">70B params &middot; 40GB VRAM &middot; Q4_K_M</div>
+            <div class="model-meta" style="color:var(--ok)">14 nodes available</div>
+          </div>
+          <div class="model-option">
+            <div class="model-name">llama-3.1-8b</div>
+            <div class="model-meta">8B params &middot; 6GB VRAM &middot; Q4_K_M</div>
+            <div class="model-meta" style="color:var(--ok)">42 nodes available</div>
+          </div>
+          <div class="model-option">
+            <div class="model-name">mistral-7b</div>
+            <div class="model-meta">7B params &middot; 5GB VRAM &middot; Q4_K_M</div>
+            <div class="model-meta" style="color:var(--ok)">38 nodes available</div>
+          </div>
+          <div class="model-option">
+            <div class="model-name">qwen-2.5-14b</div>
+            <div class="model-meta">14B params &middot; 10GB VRAM &middot; Q4_K_M</div>
+            <div class="model-meta" style="color:var(--wn)">8 nodes available</div>
+          </div>
+          <div class="model-option">
+            <div class="model-name">phi-3.5-3.8b</div>
+            <div class="model-meta">3.8B params &middot; 3GB VRAM &middot; Q4_K_M</div>
+            <div class="model-meta" style="color:var(--ok)">56 nodes available</div>
+          </div>
+          <div class="model-option">
+            <div class="model-name">llama-3.1-405b</div>
+            <div class="model-meta">405B params &middot; 200GB &middot; Sharded</div>
+            <div class="model-meta" style="color:var(--ar)">Coming Soon</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>CORE_NODE_OS | Swarm AI Network</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        :root {
+            --glass-bg: rgba(23, 28, 35, 0.8);
+            --glass-border: rgba(48, 54, 61, 0.5);
+        }
+        body {
+            background-color: #0b141b; /* surface-container-lowest mapped */
+            color: #dee2ec; /* on-surface */
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Custom scrollbar for dense lists */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #30353d; border-radius: 10px; }
+
+        .metric-glow {
+            text-shadow: 0 0 12px rgba(173, 198, 255, 0.4);
+        }
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary-fixed": "#6ffbbe",
+                      "on-surface-variant": "#c2c6d6",
+                      "inverse-primary": "#005ac2",
+                      "on-surface": "#dee2ec",
+                      "surface-container-highest": "#30353d",
+                      "on-tertiary-fixed": "#2a1700",
+                      "primary": "#adc6ff",
+                      "on-error-container": "#ffdad6",
+                      "on-primary-fixed-variant": "#004395",
+                      "tertiary": "#ffb95f",
+                      "surface-bright": "#343941",
+                      "error-container": "#93000a",
+                      "on-primary": "#002e6a",
+                      "on-tertiary-fixed-variant": "#653e00",
+                      "tertiary-container": "#ca8100",
+                      "secondary": "#4edea3",
+                      "surface-container-low": "#171c23",
+                      "surface-container-lowest": "#090f15",
+                      "primary-fixed": "#d8e2ff",
+                      "on-primary-fixed": "#001a42",
+                      "surface-tint": "#adc6ff",
+                      "inverse-on-surface": "#2c3138",
+                      "on-secondary-fixed": "#002113",
+                      "primary-container": "#4d8eff",
+                      "on-secondary-fixed-variant": "#005236",
+                      "surface-dim": "#0f141b",
+                      "on-secondary-container": "#00311f",
+                      "on-primary-container": "#00285d",
+                      "inverse-surface": "#dee2ec",
+                      "tertiary-fixed": "#ffddb8",
+                      "background": "#0f141b",
+                      "surface-container-high": "#252a32",
+                      "surface": "#0f141b",
+                      "secondary-container": "#00a572",
+                      "primary-fixed-dim": "#adc6ff",
+                      "surface-variant": "#30353d",
+                      "secondary-fixed-dim": "#4edea3",
+                      "on-background": "#dee2ec",
+                      "outline": "#8c909f",
+                      "on-tertiary": "#472a00",
+                      "error": "#ffb4ab",
+                      "tertiary-fixed-dim": "#ffb95f",
+                      "surface-container": "#1b2027",
+                      "outline-variant": "#424754",
+                      "on-error": "#690005",
+                      "on-secondary": "#003824",
+                      "on-tertiary-container": "#3e2400"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "xl": "32px",
+                      "lg": "24px",
+                      "gutter": "16px",
+                      "xs": "4px",
+                      "md": "16px",
+                      "sm": "8px",
+                      "margin-mobile": "16px",
+                      "unit": "4px",
+                      "margin-desktop": "32px"
+              },
+              "fontFamily": {
+                      "mono-label": ["JetBrains Mono"],
+                      "mono-data": ["JetBrains Mono"],
+                      "body-sm": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "headline-sm": ["Inter"],
+                      "button-text": ["Inter"]
+              },
+              "fontSize": {
+                      "mono-label": ["13px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "mono-data": ["12px", {"lineHeight": "14px", "fontWeight": "400"}],
+                      "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                      "button-text": ["14px", {"lineHeight": "20px", "fontWeight": "500"}]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container-lowest">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-margin-mobile h-14 bg-surface-container-low border-b border-outline-variant">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">terminal</span>
+<span class="font-mono-label text-mono-label tracking-tighter text-secondary">CORE_NODE_OS</span>
+</div>
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-on-surface-variant hover:bg-surface-container-highest transition-colors p-1 rounded">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant hover:bg-surface-container-highest transition-colors p-1 rounded">settings</span>
+</div>
+</header>
+<main class="pt-14 pb-20 px-4">
+<!-- Hero Stat Section -->
+<section class="mt-lg mb-md">
+<div class="glass-panel p-lg rounded-xl relative overflow-hidden">
+<!-- Atmospheric Background Grid -->
+<div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#adc6ff 1px, transparent 1px); background-size: 16px 16px;"></div>
+<div class="relative z-10">
+<p class="font-mono-label text-mono-label uppercase text-on-surface-variant mb-xs">Global Network Status</p>
+<div class="flex items-baseline gap-sm">
+<h1 class="font-headline-lg text-headline-lg text-primary metric-glow">142</h1>
+<span class="font-mono-label text-mono-label text-secondary">ACTIVE NODES</span>
+</div>
+<div class="mt-md flex items-center gap-sm">
+<div class="h-1 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[88%] animate-pulse"></div>
+</div>
+<span class="font-mono-data text-mono-data text-on-surface-variant">88%</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Secondary Stats Grid (Bento Style) -->
+<section class="grid grid-cols-2 gap-sm mb-lg">
+<div class="glass-panel p-md rounded-xl">
+<div class="flex items-center justify-between mb-sm">
+<span class="material-symbols-outlined text-tertiary text-sm">toll</span>
+<span class="font-mono-data text-mono-data text-on-tertiary-container">+2.4%</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Daily Tokens</p>
+<p class="font-mono-label text-mono-label text-white">24.8M</p>
+</div>
+<div class="glass-panel p-md rounded-xl">
+<div class="flex items-center justify-between mb-sm">
+<span class="material-symbols-outlined text-secondary text-sm">timer</span>
+<span class="font-mono-data text-mono-data text-secondary">-4ms</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">P95 Latency</p>
+<p class="font-mono-label text-mono-label text-secondary">112ms</p>
+</div>
+<div class="glass-panel p-md rounded-xl col-span-2 flex items-center justify-between bg-surface-container-low">
+<div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Wallet Balance</p>
+<p class="font-mono-label text-mono-label text-white">198,400 <span class="text-secondary opacity-80">BDT</span></p>
+</div>
+<button class="bg-primary-container text-on-primary-container px-md py-sm rounded-lg font-button-text text-button-text active:scale-95 transition-transform">
+                    Deposit
+                </button>
+</div>
+</section>
+<!-- Node Map Visualization (Mini) -->
+<section class="mb-lg">
+<div class="h-32 w-full rounded-xl glass-panel relative overflow-hidden group">
+<div class="absolute inset-0 flex items-center justify-center opacity-30">
+<!-- Placeholder for Network Graph Visual -->
+<div class="grid grid-cols-8 gap-4">
+<div class="w-1 h-1 bg-secondary rounded-full animate-ping"></div>
+<div class="w-1 h-1 bg-secondary rounded-full"></div>
+<div class="w-1 h-1 bg-secondary rounded-full opacity-50"></div>
+<div class="w-1 h-1 bg-secondary rounded-full animate-pulse"></div>
+<div class="w-1 h-1 bg-secondary rounded-full"></div>
+<div class="w-1 h-1 bg-secondary rounded-full opacity-20"></div>
+<div class="w-1 h-1 bg-secondary rounded-full"></div>
+<div class="w-1 h-1 bg-secondary rounded-full"></div>
+</div>
+</div>
+<div class="absolute bottom-2 left-2 flex items-center gap-xs">
+<div class="w-2 h-2 bg-secondary rounded-full"></div>
+<span class="text-[10px] font-mono-data text-on-surface-variant">US-EAST-1 LIVE</span>
+</div>
+</div>
+</section>
+<!-- Recent Activity Feed -->
+<section class="mb-4">
+<div class="flex items-center justify-between mb-md">
+<h3 class="font-headline-sm text-headline-sm">Recent Activity</h3>
+<span class="font-mono-data text-mono-data text-primary px-2 py-0.5 rounded-full bg-primary/10">LIVE</span>
+</div>
+<div class="space-y-unit">
+<!-- List Item 1 -->
+<div class="glass-panel p-sm flex items-center justify-between hover:bg-surface-container-highest transition-colors">
+<div class="flex items-center gap-md">
+<div class="w-1.5 h-6 bg-secondary rounded-full"></div>
+<div>
+<p class="font-mono-label text-mono-label text-on-surface">NODE_JOIN</p>
+<p class="font-mono-data text-mono-data text-on-surface-variant">ID: 0x82f...a12</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-mono-data text-mono-data text-secondary">Success</p>
+<p class="font-body-sm text-[10px] text-on-surface-variant">2m ago</p>
+</div>
+</div>
+<!-- List Item 2 -->
+<div class="glass-panel p-sm flex items-center justify-between hover:bg-surface-container-highest transition-colors">
+<div class="flex items-center gap-md">
+<div class="w-1.5 h-6 bg-error rounded-full"></div>
+<div>
+<p class="font-mono-label text-mono-label text-on-surface">HEARTBEAT_FAIL</p>
+<p class="font-mono-data text-mono-data text-on-surface-variant">ID: 0x44b...ff8</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-mono-data text-mono-data text-error">Failed</p>
+<p class="font-body-sm text-[10px] text-on-surface-variant">14m ago</p>
+</div>
+</div>
+<!-- List Item 3 -->
+<div class="glass-panel p-sm flex items-center justify-between hover:bg-surface-container-highest transition-colors">
+<div class="flex items-center gap-md">
+<div class="w-1.5 h-6 bg-tertiary rounded-full"></div>
+<div>
+<p class="font-mono-label text-mono-label text-on-surface">REBALANCE</p>
+<p class="font-mono-data text-mono-data text-on-surface-variant">Shards 42..88</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-mono-data text-mono-data text-tertiary">Warning</p>
+<p class="font-body-sm text-[10px] text-on-surface-variant">22m ago</p>
+</div>
+</div>
+<!-- List Item 4 -->
+<div class="glass-panel p-sm flex items-center justify-between hover:bg-surface-container-highest transition-colors">
+<div class="flex items-center gap-md">
+<div class="w-1.5 h-6 bg-secondary rounded-full"></div>
+<div>
+<p class="font-mono-label text-mono-label text-on-surface">TX_VALIDATED</p>
+<p class="font-mono-data text-mono-data text-on-surface-variant">Batch #4,921</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-mono-data text-mono-data text-secondary">Success</p>
+<p class="font-body-sm text-[10px] text-on-surface-variant">1h ago</p>
+</div>
+</div>
+</div>
+<button class="w-full mt-md py-sm font-mono-label text-mono-label text-primary border border-outline-variant rounded-lg hover:bg-surface-container-highest transition-colors">
+                VIEW_ALL_LOGS
+            </button>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 px-4 pb-safe bg-surface-container-low border-t border-outline-variant">
+<!-- Nodes (Active) -->
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-xl px-4 py-1 transition-transform scale-95" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dns</span>
+<span class="font-body-sm text-body-sm mt-0.5">Nodes</span>
+</a>
+<!-- Metrics -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface transition-transform active:scale-90" href="#">
+<span class="material-symbols-outlined">query_stats</span>
+<span class="font-body-sm text-body-sm mt-0.5">Metrics</span>
+</a>
+<!-- Logs -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface transition-transform active:scale-90" href="#">
+<span class="material-symbols-outlined">history_edu</span>
+<span class="font-body-sm text-body-sm mt-0.5">Logs</span>
+</a>
+<!-- Wallet -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface transition-transform active:scale-90" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-body-sm text-body-sm mt-0.5">Wallet</span>
+</a>
+</nav>
+<script>
+        // Micro-interaction: Randomly pulse the active node indicator
+        document.addEventListener('DOMContentLoaded', () => {
+            const bar = document.querySelector('.bg-primary.animate-pulse');
+            setInterval(() => {
+                const randomWidth = Math.floor(Math.random() * (92 - 84 + 1)) + 84;
+                bar.style.width = `${randomWidth}%`;
+            }, 3000);
+        });
+    </script>
+</body></html>

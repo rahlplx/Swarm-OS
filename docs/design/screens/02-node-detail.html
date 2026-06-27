@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swarm-OS — Node Detail</title>
+<style>
+  :root {
+    --md-primary: #B8C9FF; --md-on-primary: #002E6A;
+    --md-primary-container: #004593; --md-on-primary-container: #D6E3FF;
+    --md-secondary: #C0C6DD; --md-on-secondary: #2C3249;
+    --md-secondary-container: #42485F; --md-on-secondary-container: #DCE2F9;
+    --md-tertiary: #DEBCE0; --md-on-tertiary: #462648;
+    --md-error: #FFB4AB; --md-on-error: #690005;
+    --md-error-container: #93000A; --md-on-error-container: #FFDAD6;
+    --md-background: #0B1120; --md-on-background: #E2E2E9;
+    --md-surface: #111827; --md-on-surface: #E2E2E9;
+    --md-surface-variant: #1F2937; --md-on-surface-variant: #C3C5D0;
+    --md-outline: #8D9099; --md-outline-variant: #44474E;
+    --md-surface-container-low: #161D2E;
+    --md-surface-container: #1C2536;
+    --md-surface-container-high: #242E40;
+    --md-surface-container-highest: #2C3749;
+    --md-inverse-surface: #E2E2E9; --md-inverse-on-surface: #2E3036;
+    --md-success: #A8DAB5; --md-success-container: #1B5E3A;
+    --md-warning: #FFCC80; --md-warning-container: #7A5800;
+    --md-accent-amber: #FFB800; --md-accent-rose: #FF4D4D; --md-accent-teal: #00C4B4;
+    --radius-xl: 28px; --radius-lg: 16px; --radius-md: 12px; --radius-sm: 8px; --radius-xs: 4px;
+    --shadow-1: 0 1px 3px 1px rgba(0,0,0,.15), 0 1px 2px rgba(0,0,0,.3);
+    --shadow-2: 0 2px 6px 2px rgba(0,0,0,.15), 0 1px 2px rgba(0,0,0,.3);
+    --shadow-3: 0 4px 8px 3px rgba(0,0,0,.15), 0 1px 3px rgba(0,0,0,.3);
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Google Sans',-apple-system,sans-serif; background:var(--md-background); color:var(--md-on-background); min-height:100vh; }
+  .top-bar { position:fixed;top:0;left:0;right:0;height:64px;background:var(--md-surface);border-bottom:1px solid var(--md-outline-variant);display:flex;align-items:center;padding:0 16px;z-index:100; }
+  .top-bar h1 { font-size:20px;font-weight:500;color:var(--md-on-surface); }
+  .top-bar .breadcrumb { font-size:14px;color:var(--md-outline);margin:0 12px; }
+  .top-bar .back-btn { width:36px;height:36px;border-radius:50%;border:none;background:transparent;color:var(--md-on-surface-variant);cursor:pointer;font-size:18px; }
+  .main { padding:88px 32px 32px;max-width:1400px;margin:0 auto; }
+  .grid { display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px; }
+  .grid-3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px; }
+  .card { background:var(--md-surface-container);border-radius:var(--radius-xl);border:1px solid var(--md-outline-variant);overflow:hidden; }
+  .card-header { padding:20px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--md-outline-variant); }
+  .card-header h3 { font-size:16px;font-weight:500;color:var(--md-on-surface); }
+  .card-body { padding:24px; }
+  .hero-card { background:linear-gradient(135deg,var(--md-primary-container),var(--md-surface-container));border-radius:var(--radius-xl);padding:32px;margin-bottom:24px;display:flex;align-items:center;gap:32px;border:1px solid var(--md-outline-variant); }
+  .hero-avatar { width:80px;height:80px;border-radius:50%;background:var(--md-success-container);display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--md-success);flex-shrink:0; }
+  .hero-info h2 { font-size:28px;font-weight:500;color:var(--md-on-surface);margin-bottom:4px; }
+  .hero-info .subtitle { font-size:14px;color:var(--md-outline);margin-bottom:12px; }
+  .hero-badges { display:flex;gap:8px; }
+  .badge { padding:4px 12px;border-radius:99px;font-size:12px;font-weight:500; }
+  .badge-success { background:color-mix(in srgb,var(--md-success-container) 40%,transparent);color:var(--md-success); }
+  .badge-warning { background:color-mix(in srgb,var(--md-warning-container) 40%,transparent);color:var(--md-warning); }
+  .badge-primary { background:color-mix(in srgb,var(--md-primary-container) 40%,transparent);color:var(--md-primary); }
+  .badge-outline { border:1px solid var(--md-outline);color:var(--md-outline); }
+  .metric-row { display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid var(--md-outline-variant); }
+  .metric-row:last-child { border-bottom:none; }
+  .metric-label { font-size:14px;color:var(--md-on-surface-variant); }
+  .metric-value { font-size:16px;font-weight:500;color:var(--md-on-surface); }
+  .metric-value.good { color:var(--md-success); }
+  .metric-value.warn { color:var(--md-warning); }
+  .metric-value.bad { color:var(--md-accent-rose); }
+  .bar-track { height:8px;background:var(--md-surface-container-highest);border-radius:99px;overflow:hidden;margin-top:8px; }
+  .bar-fill { height:100%;border-radius:99px;transition:width 0.5s ease; }
+  .bar-fill.good { background:var(--md-success); }
+  .bar-fill.warn { background:var(--md-warning); }
+  .bar-fill.bad { background:var(--md-accent-rose); }
+  .bar-fill.info { background:var(--md-primary); }
+  .section-title { font-size:14px;font-weight:500;color:var(--md-outline);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px; }
+  .btn-filled { padding:10px 24px;border-radius:var(--radius-xl);font-size:14px;font-weight:500;background:var(--md-primary);color:var(--md-on-primary);border:none;cursor:pointer;display:flex;align-items:center;gap:8px; }
+  .btn-tonal { padding:10px 24px;border-radius:var(--radius-xl);font-size:14px;font-weight:500;background:var(--md-secondary-container);color:var(--md-on-secondary-container);border:none;cursor:pointer;display:flex;align-items:center;gap:8px; }
+  .btn-outlined { padding:10px 24px;border-radius:var(--radius-xl);font-size:14px;font-weight:500;background:transparent;color:var(--md-primary);border:1px solid var(--md-outline);cursor:pointer;display:flex;align-items:center;gap:8px; }
+  .btn-danger { padding:10px 24px;border-radius:var(--radius-xl);font-size:14px;font-weight:500;background:var(--md-error-container);color:var(--md-on-error-container);border:none;cursor:pointer; }
+  .btn-icon { width:36px;height:36px;border-radius:50%;border:none;background:transparent;color:var(--md-on-surface-variant);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center; }
+  .btn-icon:hover { background:var(--md-surface-container-high); }
+  .timeline-item { display:flex;gap:12px;padding:12px 0; }
+  .timeline-dot { width:10px;height:10px;border-radius:50%;margin-top:5px;flex-shrink:0; }
+  .timeline-dot.green { background:var(--md-success); }
+  .timeline-dot.yellow { background:var(--md-warning); }
+  .timeline-dot.red { background:var(--md-accent-rose); }
+  .timeline-dot.blue { background:var(--md-primary); }
+  .timeline-text { font-size:14px;color:var(--md-on-surface-variant); }
+  .timeline-text strong { color:var(--md-on-surface);font-weight:500; }
+  .timeline-time { font-size:12px;color:var(--md-outline);margin-top:2px; }
+  .chart-placeholder { height:200px;background:var(--md-surface-container-low);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;color:var(--md-outline);font-size:14px;position:relative;overflow:hidden; }
+  .chart-placeholder::after { content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--md-primary-container),transparent);opacity:0.1; }
+  .actions-bar { display:flex;gap:12px;margin-top:24px; }
+</style>
+</head>
+<body>
+  <header class="top-bar">
+    <button class="back-btn" onclick="history.back()">&#8592;</button>
+    <h1>Swarm-OS</h1>
+    <span class="breadcrumb">/ Nodes / BD-03</span>
+  </header>
+
+  <main class="main">
+    <!-- Hero Card -->
+    <div class="hero-card">
+      <div class="hero-avatar">&#9889;</div>
+      <div class="hero-info" style="flex:1">
+        <h2>BD-03 &middot; RTX 4090</h2>
+        <div class="subtitle">Dhaka, Bangladesh &middot; Joined 47 days ago &middot; Owner: arif@dev.bd</div>
+        <div class="hero-badges">
+          <span class="badge badge-success">&#9679; Online</span>
+          <span class="badge badge-primary">CUDA 12.4</span>
+          <span class="badge badge-primary">24 GB VRAM</span>
+          <span class="badge badge-outline">Score: 98</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-tonal">&#128276; Ping</button>
+        <button class="btn-outlined">&#128221; Edit</button>
+        <button class="btn-danger">&#9209; Blacklist</button>
+      </div>
+    </div>
+
+    <!-- Top Metrics -->
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-body">
+          <div class="section-title">Confidence Score</div>
+          <div style="font-size:48px;font-weight:500;color:var(--md-success);margin-bottom:8px">98%</div>
+          <div class="bar-track"><div class="bar-fill good" style="width:98%"></div></div>
+          <div style="font-size:12px;color:var(--md-outline);margin-top:8px">Based on uptime, latency, throughput</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <div class="section-title">Tokens Generated</div>
+          <div style="font-size:48px;font-weight:500;color:var(--md-primary);margin-bottom:8px">88.5<span style="font-size:20px">/s</span></div>
+          <div class="bar-track"><div class="bar-fill info" style="width:88%"></div></div>
+          <div style="font-size:12px;color:var(--md-outline);margin-top:8px">RTX 4090 decode throughput</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <div class="section-title">Credits Earned</div>
+          <div style="font-size:48px;font-weight:500;color:var(--md-accent-amber);margin-bottom:8px">342</div>
+          <div style="font-size:12px;color:var(--md-outline);margin-top:4px">Today &middot; ~34.2M tokens</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detail Grid -->
+    <div class="grid">
+      <!-- Hardware Profile -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Hardware Profile</h3>
+          <button class="btn-icon" title="Refresh">&#8635;</button>
+        </div>
+        <div class="card-body">
+          <div class="metric-row">
+            <span class="metric-label">GPU</span>
+            <span class="metric-value">NVIDIA RTX 4090</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">VRAM</span>
+            <div>
+              <span class="metric-value">18.2 / 24 GB</span>
+              <div class="bar-track"><div class="bar-fill warn" style="width:76%"></div></div>
+            </div>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">RAM</span>
+            <div>
+              <span class="metric-value">42.1 / 64 GB</span>
+              <div class="bar-track"><div class="bar-fill good" style="width:66%"></div></div>
+            </div>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">CPU</span>
+            <span class="metric-value">AMD Ryzen 9 7950X (16C/32T)</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Disk I/O</span>
+            <span class="metric-value">3.2 GB/s NVMe</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Bandwidth Tier</span>
+            <span class="metric-value good">Metro (&gt;20 Mbps)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Network & Latency -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Network & Latency</h3>
+          <span class="badge badge-success">&#9679; Low Jitter</span>
+        </div>
+        <div class="card-body">
+          <div class="metric-row">
+            <span class="metric-label">P50 Latency</span>
+            <span class="metric-value good">32ms</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">P95 Latency</span>
+            <span class="metric-value good">67ms</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Jitter</span>
+            <span class="metric-value good">8ms</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Connection Type</span>
+            <span class="metric-value">WireGuard Mesh</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">ASN</span>
+            <span class="metric-value">AS9299 (Link3)</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">CGNAT</span>
+            <span class="metric-value good">Bypassed (DERP)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Throughput Chart + Activity Log -->
+    <div class="grid">
+      <div class="card">
+        <div class="card-header">
+          <h3>Throughput (24h)</h3>
+          <div style="display:flex;gap:4px">
+            <button class="btn-icon" style="font-size:12px">1H</button>
+            <button class="btn-icon" style="font-size:12px;background:var(--md-primary-container);color:var(--md-on-primary-container);border-radius:99px">24H</button>
+            <button class="btn-icon" style="font-size:12px">7D</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="chart-placeholder">
+            &#128200; Throughput chart — tokens/sec over 24 hours<br>
+            <span style="font-size:12px;margin-top:4px">Avg: 88.5 tok/s &middot; Peak: 91.2 tok/s &middot; Low: 72.1 tok/s</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Activity Log</h3>
+          <button class="btn-icon" title="Filter">&#128269;</button>
+        </div>
+        <div class="card-body">
+          <div class="timeline-item">
+            <div class="timeline-dot green"></div>
+            <div>
+              <div class="timeline-text"><strong>Inference complete</strong> — llama-3.1-70b, 1,247 tokens in 14.1s</div>
+              <div class="timeline-time">2 minutes ago</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot blue"></div>
+            <div>
+              <div class="timeline-text"><strong>Model loaded</strong> — llama-3.1-70b-q4_k_m.gguf (43.1 GB)</div>
+              <div class="timeline-time">18 minutes ago</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot green"></div>
+            <div>
+              <div class="timeline-text"><strong>Credits earned</strong> — +12.4 cr (1,240 tokens generated)</div>
+              <div class="timeline-time">22 minutes ago</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot yellow"></div>
+            <div>
+              <div class="timeline-text"><strong>Jitter spike</strong> — 47ms peak, resolved after 3s</div>
+              <div class="timeline-time">1 hour ago</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot green"></div>
+            <div>
+              <div class="timeline-text"><strong>Heartbeat OK</strong> — etcd lease renewed, score: 98</div>
+              <div class="timeline-time">1 hour ago</div>
+            </div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot red"></div>
+            <div>
+              <div class="timeline-text"><strong>Shard failed</strong> — BD-07 dropped mid-inference, reassigned to BD-01</div>
+              <div class="timeline-time">3 hours ago</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions-bar">
+      <button class="btn-filled">&#128260; Restart Agent</button>
+      <button class="btn-tonal">&#128196; View Full Ledger</button>
+      <button class="btn-outlined">&#128279; Open in Mesh Map</button>
+    </div>
+  </main>
+</body>
+</html>

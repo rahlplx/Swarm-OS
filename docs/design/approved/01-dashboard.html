@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swarm-OS Dashboard</title>
+<style>
+  /* Material 3 Design Tokens — Expressive AG UI */
+  :root {
+    --md-sys-color-primary: #B8C9FF;
+    --md-sys-color-on-primary: #002E6A;
+    --md-sys-color-primary-container: #004593;
+    --md-sys-color-on-primary-container: #D6E3FF;
+    --md-sys-color-secondary: #C0C6DD;
+    --md-sys-color-on-secondary: #2C3249;
+    --md-sys-color-secondary-container: #42485F;
+    --md-sys-color-on-secondary-container: #DCE2F9;
+    --md-sys-color-tertiary: #DEBCE0;
+    --md-sys-color-on-tertiary: #462648;
+    --md-sys-color-tertiary-container: #5F3D61;
+    --md-sys-color-on-tertiary-container: #FBD7FA;
+    --md-sys-color-error: #FFB4AB;
+    --md-sys-color-on-error: #690005;
+    --md-sys-color-error-container: #93000A;
+    --md-sys-color-on-error-container: #FFDAD6;
+    --md-sys-color-background: #0B1120;
+    --md-sys-color-on-background: #E2E2E9;
+    --md-sys-color-surface: #111827;
+    --md-sys-color-on-surface: #E2E2E9;
+    --md-sys-color-surface-variant: #1F2937;
+    --md-sys-color-on-surface-variant: #C3C5D0;
+    --md-sys-color-outline: #8D9099;
+    --md-sys-color-outline-variant: #44474E;
+    --md-sys-color-surface-container-low: #161D2E;
+    --md-sys-color-surface-container: #1C2536;
+    --md-sys-color-surface-container-high: #242E40;
+    --md-sys-color-surface-container-highest: #2C3749;
+    --md-sys-color-inverse-surface: #E2E2E9;
+    --md-sys-color-inverse-on-surface: #2E3036;
+    --md-sys-color-success: #A8DAB5;
+    --md-sys-color-success-container: #1B5E3A;
+    --md-sys-color-warning: #FFCC80;
+    --md-sys-color-warning-container: #7A5800;
+    --md-sys-color-info: #A8C8FF;
+    --md-sys-color-info-container: #004593;
+    --md-sys-color-accent-amber: #FFB800;
+    --md-sys-color-accent-rose: #FF4D4D;
+    --md-sys-color-accent-teal: #00C4B4;
+    --md-sys-elevation-1: 0 1px 3px 1px rgba(0,0,0,.15), 0 1px 2px rgba(0,0,0,.3);
+    --md-sys-elevation-2: 0 2px 6px 2px rgba(0,0,0,.15), 0 1px 2px rgba(0,0,0,.3);
+    --md-sys-elevation-3: 0 4px 8px 3px rgba(0,0,0,.15), 0 1px 3px rgba(0,0,0,.3);
+    --md-sys-shape-corner-xl: 28px;
+    --md-sys-shape-corner-lg: 16px;
+    --md-sys-shape-corner-md: 12px;
+    --md-sys-shape-corner-sm: 8px;
+    --md-sys-shape-corner-xs: 4px;
+    --md-sys-typescale-display-large: 500 57px/64px 'Google Sans', sans-serif;
+    --md-sys-typescale-display-medium: 500 45px/52px 'Google Sans', sans-serif;
+    --md-sys-typescale-headline-large: 500 32px/40px 'Google Sans', sans-serif;
+    --md-sys-typescale-headline-medium: 500 28px/36px 'Google Sans', sans-serif;
+    --md-sys-typescale-title-large: 500 22px/28px 'Google Sans', sans-serif;
+    --md-sys-typescale-title-medium: 500 16px/24px 'Google Sans', sans-serif;
+    --md-sys-typescale-body-large: 400 16px/24px 'Google Sans', sans-serif;
+    --md-sys-typescale-body-medium: 400 14px/20px 'Google Sans', sans-serif;
+    --md-sys-typescale-body-small: 400 12px/16px 'Google Sans', sans-serif;
+    --md-sys-typescale-label-large: 500 14px/20px 'Google Sans', sans-serif;
+    --md-sys-typescale-label-medium: 500 12px/16px 'Google Sans', sans-serif;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;500;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--md-sys-color-background);
+    color: var(--md-sys-color-on-background);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Top App Bar — Material 3 Expressive */
+  .top-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 64px;
+    background: var(--md-sys-color-surface);
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    z-index: 100;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .top-bar-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 240px;
+  }
+
+  .top-bar-logo svg { width: 32px; height: 32px; }
+
+  .top-bar-logo h1 {
+    font: var(--md-sys-typescale-title-large);
+    color: var(--md-sys-color-on-surface);
+    letter-spacing: -0.02em;
+  }
+
+  .top-bar-logo .version {
+    font: var(--md-sys-typescale-label-medium);
+    color: var(--md-sys-color-outline);
+    background: var(--md-sys-color-surface-container-high);
+    padding: 2px 8px;
+    border-radius: 99px;
+  }
+
+  .top-bar-status {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-left: auto;
+  }
+
+  .status-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 99px;
+    font: var(--md-sys-typescale-label-large);
+    transition: all 0.2s ease;
+  }
+
+  .status-chip.active {
+    background: color-mix(in srgb, var(--md-sys-color-success-container) 30%, transparent);
+    color: var(--md-sys-color-success);
+  }
+
+  .status-chip.warning {
+    background: color-mix(in srgb, var(--md-sys-color-warning-container) 30%, transparent);
+    color: var(--md-sys-color-warning);
+  }
+
+  .status-chip .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .status-chip.active .dot { background: var(--md-sys-color-success); }
+  .status-chip.warning .dot { background: var(--md-sys-color-warning); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.85); }
+  }
+
+  /* Main Layout */
+  .app-layout {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    min-height: 100vh;
+    padding-top: 64px;
+  }
+
+  /* Navigation Rail — Material 3 */
+  .nav-rail {
+    width: 72px;
+    background: var(--md-sys-color-surface-container-low);
+    border-right: 1px solid var(--md-sys-color-outline-variant);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    gap: 4px;
+  }
+
+  .nav-rail-item {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--md-sys-shape-corner-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    border: none;
+    background: transparent;
+    color: var(--md-sys-color-on-surface-variant);
+  }
+
+  .nav-rail-item.active {
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+  }
+
+  .nav-rail-item:hover:not(.active) {
+    background: var(--md-sys-color-surface-container-high);
+  }
+
+  .nav-rail-item .icon { font-size: 20px; }
+  .nav-rail-item .label {
+    font: var(--md-sys-typescale-label-medium);
+    font-size: 10px;
+  }
+
+  .nav-rail-divider {
+    width: 32px;
+    height: 1px;
+    background: var(--md-sys-color-outline-variant);
+    margin: 8px 0;
+  }
+
+  /* Main Content */
+  .main-content {
+    padding: 24px 32px;
+    overflow-y: auto;
+    max-height: calc(100vh - 64px);
+  }
+
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .page-header h2 {
+    font: var(--md-sys-typescale-headline-medium);
+    color: var(--md-sys-color-on-surface);
+  }
+
+  .page-header-actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  /* Filled Button — Material 3 */
+  .btn-filled {
+    padding: 10px 24px;
+    border-radius: var(--md-sys-shape-corner-xl);
+    font: var(--md-sys-typescale-label-large);
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-filled:hover { box-shadow: var(--md-sys-elevation-1); }
+  .btn-filled:active { transform: scale(0.98); }
+
+  .btn-tonal {
+    padding: 10px 24px;
+    border-radius: var(--md-sys-shape-corner-xl);
+    font: var(--md-sys-typescale-label-large);
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-tonal:hover { box-shadow: var(--md-sys-elevation-1); }
+
+  .btn-outlined {
+    padding: 10px 24px;
+    border-radius: var(--md-sys-shape-corner-xl);
+    font: var(--md-sys-typescale-label-large);
+    background: transparent;
+    color: var(--md-sys-color-primary);
+    border: 1px solid var(--md-sys-color-outline);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-outlined:hover {
+    background: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent);
+  }
+
+  .btn-icon {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--md-sys-color-on-surface-variant);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: all 0.2s ease;
+  }
+
+  .btn-icon:hover { background: var(--md-sys-color-surface-container-high); }
+
+  /* Stats Grid — Confidence Metrics */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--md-sys-color-surface-container);
+    border-radius: var(--md-sys-shape-corner-xl);
+    padding: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .stat-card:hover {
+    border-color: var(--md-sys-color-outline-variant);
+    transform: translateY(-2px);
+    box-shadow: var(--md-sys-elevation-2);
+  }
+
+  .stat-card:hover::before { opacity: 1; }
+  .stat-card.primary::before { background: var(--md-sys-color-primary); }
+  .stat-card.success::before { background: var(--md-sys-color-success); }
+  .stat-card.warning::before { background: var(--md-sys-color-warning); }
+  .stat-card.accent::before { background: var(--md-sys-color-accent-amber); }
+
+  .stat-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .stat-card-label {
+    font: var(--md-sys-typescale-body-medium);
+    color: var(--md-sys-color-on-surface-variant);
+  }
+
+  .stat-card-icon {
+    width: 36px; height: 36px;
+    border-radius: var(--md-sys-shape-corner-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  .stat-card.primary .stat-card-icon {
+    background: color-mix(in srgb, var(--md-sys-color-primary-container) 40%, transparent);
+    color: var(--md-sys-color-primary);
+  }
+
+  .stat-card.success .stat-card-icon {
+    background: color-mix(in srgb, var(--md-sys-color-success-container) 40%, transparent);
+    color: var(--md-sys-color-success);
+  }
+
+  .stat-card.warning .stat-card-icon {
+    background: color-mix(in srgb, var(--md-sys-color-warning-container) 40%, transparent);
+    color: var(--md-sys-color-warning);
+  }
+
+  .stat-card.accent .stat-card-icon {
+    background: color-mix(in srgb, #FFB800 20%, transparent);
+    color: var(--md-sys-color-accent-amber);
+  }
+
+  .stat-card-value {
+    font: var(--md-sys-typescale-display-medium);
+    font-size: 36px;
+    line-height: 1.1;
+    margin-bottom: 4px;
+  }
+
+  .stat-card.primary .stat-card-value { color: var(--md-sys-color-primary); }
+  .stat-card.success .stat-card-value { color: var(--md-sys-color-success); }
+  .stat-card.warning .stat-card-value { color: var(--md-sys-color-warning); }
+  .stat-card.accent .stat-card-value { color: var(--md-sys-color-accent-amber); }
+
+  .stat-card-sub {
+    font: var(--md-sys-typescale-body-small);
+    color: var(--md-sys-color-outline);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .stat-card-sub .trend-up { color: var(--md-sys-color-success); }
+  .stat-card-sub .trend-down { color: var(--md-sys-color-accent-rose); }
+
+  /* Two-Column Layout */
+  .content-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  /* Card — Material 3 */
+  .card {
+    background: var(--md-sys-color-surface-container);
+    border-radius: var(--md-sys-shape-corner-xl);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  }
+
+  .card-header h3 {
+    font: var(--md-sys-typescale-title-medium);
+    color: var(--md-sys-color-on-surface);
+  }
+
+  .card-body { padding: 24px; }
+
+  /* Network Topology — Swarm Map */
+  .topology-container {
+    height: 400px;
+    position: relative;
+    background: radial-gradient(circle at 50% 50%, var(--md-sys-color-surface-container-high) 0%, var(--md-sys-color-surface-container) 100%);
+    border-radius: var(--md-sys-shape-corner-lg);
+    overflow: hidden;
+  }
+
+  .topology-canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Node Element */
+  .node-element {
+    position: absolute;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2;
+  }
+
+  .node-element::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    transition: border-color 0.3s ease;
+  }
+
+  .node-element:hover::before {
+    border-color: var(--md-sys-color-primary);
+  }
+
+  .node-element.active {
+    background: var(--md-sys-color-success-container);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--md-sys-color-success) 30%, transparent);
+  }
+
+  .node-element.warning {
+    background: var(--md-sys-color-warning-container);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--md-sys-color-warning) 30%, transparent);
+  }
+
+  .node-element.idle {
+    background: var(--md-sys-color-surface-container-highest);
+  }
+
+  .node-element .node-id {
+    font: var(--md-sys-typescale-label-medium);
+    font-size: 10px;
+    color: white;
+  }
+
+  .node-element .node-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--md-sys-color-inverse-surface);
+    color: var(--md-sys-color-inverse-on-surface);
+    padding: 8px 12px;
+    border-radius: var(--md-sys-shape-corner-sm);
+    font: var(--md-sys-typescale-body-small);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    margin-bottom: 8px;
+  }
+
+  .node-element:hover .node-tooltip { opacity: 1; }
+
+  /* Connection Lines (SVG overlay) */
+  .connection-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .connection-line {
+    stroke: var(--md-sys-color-outline-variant);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 4;
+    opacity: 0.6;
+    animation: dash-flow 20s linear infinite;
+  }
+
+  .connection-line.active {
+    stroke: var(--md-sys-color-success);
+    stroke-dasharray: none;
+    opacity: 1;
+    animation: pulse-line 2s ease-in-out infinite;
+  }
+
+  @keyframes dash-flow { to { stroke-dashoffset: -100; } }
+  @keyframes pulse-line {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Ledger Explorer — Merkle DAG */
+  .ledger-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .ledger-block {
+    display: flex;
+    gap: 16px;
+    padding: 16px 0;
+    position: relative;
+  }
+
+  .ledger-block:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 19px;
+    top: 48px;
+    bottom: 0;
+    width: 2px;
+    background: var(--md-sys-color-outline-variant);
+  }
+
+  .ledger-block-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    z-index: 1;
+  }
+
+  .ledger-block.finalized .ledger-block-icon {
+    background: var(--md-sys-color-success-container);
+    color: var(--md-sys-color-success);
+  }
+
+  .ledger-block.pending .ledger-block-icon {
+    background: var(--md-sys-color-warning-container);
+    color: var(--md-sys-color-warning);
+  }
+
+  .ledger-block-content { flex: 1; }
+
+  .ledger-block-title {
+    font: var(--md-sys-typescale-label-large);
+    color: var(--md-sys-color-on-surface);
+    margin-bottom: 4px;
+  }
+
+  .ledger-block-hash {
+    font: var(--md-sys-typescale-body-small);
+    color: var(--md-sys-color-outline);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    margin-bottom: 6px;
+    word-break: break-all;
+  }
+
+  .ledger-block-meta {
+    display: flex;
+    gap: 12px;
+    font: var(--md-sys-typescale-body-small);
+    color: var(--md-sys-color-on-surface-variant);
+  }
+
+  .ledger-block-meta .badge {
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .badge-finalized {
+    background: color-mix(in srgb, var(--md-sys-color-success-container) 40%, transparent);
+    color: var(--md-sys-color-success);
+  }
+
+  .badge-pending {
+    background: color-mix(in srgb, var(--md-sys-color-warning-container) 40%, transparent);
+    color: var(--md-sys-color-warning);
+  }
+
+  /* Credit Co-op Dashboard */
+  .credit-summary {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: var(--md-sys-color-surface-container-low);
+    border-radius: var(--md-sys-shape-corner-lg);
+    margin-bottom: 20px;
+  }
+
+  .credit-balance {
+    font: var(--md-sys-typescale-display-large);
+    font-size: 48px;
+    color: var(--md-sys-color-accent-amber);
+    line-height: 1;
+  }
+
+  .credit-balance .currency {
+    font: var(--md-sys-typescale-title-medium);
+    color: var(--md-sys-color-outline);
+    font-size: 18px;
+    margin-left: 4px;
+  }
+
+  .credit-breakdown {
+    display: flex;
+    gap: 24px;
+  }
+
+  .credit-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .credit-item-label {
+    font: var(--md-sys-typescale-body-small);
+    color: var(--md-sys-color-outline);
+  }
+
+  .credit-item-value {
+    font: var(--md-sys-typescale-title-medium);
+    color: var(--md-sys-color-on-surface);
+  }
+
+  /* Node Telemetry Panel */
+  .node-telemetry-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .node-telemetry-item {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr 1fr;
+    gap: 16px;
+    align-items: center;
+    padding: 16px;
+    background: var(--md-sys-color-surface-container-low);
+    border-radius: var(--md-sys-shape-corner-md);
+    transition: all 0.2s ease;
+  }
+
+  .node-telemetry-item:hover {
+    background: var(--md-sys-color-surface-container);
+    box-shadow: var(--md-sys-elevation-1);
+  }
+
+  .node-telemetry-name {
+    font: var(--md-sys-typescale-label-large);
+    color: var(--md-sys-color-on-surface);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .node-telemetry-name .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  .node-telemetry-name .status-dot.green { background: var(--md-sys-color-success); }
+  .node-telemetry-name .status-dot.yellow { background: var(--md-sys-color-warning); }
+
+  .node-telemetry-metric {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .node-telemetry-metric .metric-label {
+    font: var(--md-sys-typescale-body-small);
+    color: var(--md-sys-color-outline);
+  }
+
+  .node-telemetry-metric .metric-value {
+    font: var(--md-sys-typescale-title-medium);
+    color: var(--md-sys-color-on-surface);
+  }
+
+  /* Confidence Score Bar */
+  .confidence-bar {
+    height: 6px;
+    background: var(--md-sys-color-surface-container-highest);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+
+  .confidence-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .confidence-bar-fill.high { background: var(--md-sys-color-success); }
+  .confidence-bar-fill.medium { background: var(--md-sys-color-warning); }
+  .confidence-bar-fill.low { background: var(--md-sys-color-accent-rose); }
+
+  /* Bottom Navigation Bar — Mobile */
+  .bottom-nav {
+    display: none;
+  }
+
+  /* Loading State */
+  .loading-skeleton {
+    background: linear-gradient(90deg,
+      var(--md-sys-color-surface-container) 25%,
+      var(--md-sys-color-surface-container-high) 50%,
+      var(--md-sys-color-surface-container) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: var(--md-sys-shape-corner-sm);
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Empty State */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    text-align: center;
+  }
+
+  .empty-state-icon {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: var(--md-sys-color-surface-container-high);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    margin-bottom: 16px;
+    color: var(--md-sys-color-outline);
+  }
+
+  .empty-state h3 {
+    font: var(--md-sys-typescale-title-large);
+    color: var(--md-sys-color-on-surface);
+    margin-bottom: 8px;
+  }
+
+  .empty-state p {
+    font: var(--md-sys-typescale-body-medium);
+    color: var(--md-sys-color-outline);
+    max-width: 400px;
+    margin-bottom: 24px;
+  }
+
+  /* Error State */
+  .error-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: color-mix(in srgb, var(--md-sys-color-error-container) 30%, transparent);
+    border: 1px solid var(--md-sys-color-error);
+    border-radius: var(--md-sys-shape-corner-lg);
+    margin-bottom: 24px;
+  }
+
+  .error-banner .icon { font-size: 20px; color: var(--md-sys-color-error); }
+
+  .error-banner .message {
+    flex: 1;
+    font: var(--md-sys-typescale-body-medium);
+    color: var(--md-sys-color-on-error-container);
+  }
+
+  .error-banner .dismiss {
+    font: var(--md-sys-typescale-label-large);
+    color: var(--md-sys-color-error);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: var(--md-sys-shape-corner-xs);
+  }
+
+  .error-banner .dismiss:hover {
+    background: color-mix(in srgb, var(--md-sys-color-error) 10%, transparent);
+  }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .content-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 768px) {
+    .app-layout { grid-template-columns: 1fr; }
+    .nav-rail { display: none; }
+    .bottom-nav {
+      display: flex;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 80px;
+      background: var(--md-sys-color-surface-container);
+      border-top: 1px solid var(--md-sys-color-outline-variant);
+      justify-content: space-around;
+      align-items: center;
+      z-index: 100;
+    }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .main-content { padding: 16px; padding-bottom: 96px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Top App Bar -->
+  <header class="top-bar">
+    <div class="top-bar-logo">
+      <svg viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="14" stroke="#B8C9FF" stroke-width="2"/>
+        <circle cx="10" cy="12" r="3" fill="#00C4B4"/>
+        <circle cx="22" cy="12" r="3" fill="#FFB800"/>
+        <circle cx="16" cy="22" r="3" fill="#FF4D4D"/>
+        <line x1="10" y1="12" x2="22" y2="12" stroke="#B8C9FF" stroke-width="1.5"/>
+        <line x1="22" y1="12" x2="16" y2="22" stroke="#B8C9FF" stroke-width="1.5"/>
+        <line x1="16" y1="22" x2="10" y2="12" stroke="#B8C9FF" stroke-width="1.5"/>
+      </svg>
+      <h1>Swarm-OS</h1>
+      <span class="version">v0.2.0</span>
+    </div>
+    <div class="top-bar-status">
+      <div class="status-chip active">
+        <span class="dot"></span>
+        Mesh Connected
+      </div>
+      <div class="status-chip warning">
+        <span class="dot"></span>
+        2 Nodes Idle
+      </div>
+      <button class="btn-icon" title="Notifications">&#128276;</button>
+      <button class="btn-icon" title="Settings">&#9881;</button>
+    </div>
+  </header>
+
+  <div class="app-layout">
+    <!-- Navigation Rail -->
+    <nav class="nav-rail">
+      <button class="nav-rail-item active">
+        <span class="icon">&#9673;</span>
+        <span class="label">Mesh</span>
+      </button>
+      <button class="nav-rail-item">
+        <span class="icon">&#9881;</span>
+        <span class="label">Nodes</span>
+      </button>
+      <div class="nav-rail-divider"></div>
+      <button class="nav-rail-item">
+        <span class="icon">&#128279;</span>
+        <span class="label">Ledger</span>
+      </button>
+      <button class="nav-rail-item">
+        <span class="icon">&#128176;</span>
+        <span class="label">Credits</span>
+      </button>
+      <div class="nav-rail-divider"></div>
+      <button class="nav-rail-item">
+        <span class="icon">&#128200;</span>
+        <span class="label">Analytics</span>
+      </button>
+      <button class="nav-rail-item">
+        <span class="icon">&#128736;</span>
+        <span class="label">Settings</span>
+      </button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Error Banner -->
+      <div class="error-banner" id="error-banner">
+        <span class="icon">&#9888;</span>
+        <span class="message">High jitter detected on node BD-07. Network latency: 247ms (threshold: 100ms)</span>
+        <button class="dismiss" onclick="document.getElementById('error-banner').style.display='none'">Dismiss</button>
+      </div>
+
+      <!-- Page Header -->
+      <div class="page-header">
+        <h2>Orchestration Mesh</h2>
+        <div class="page-header-actions">
+          <button class="btn-outlined">
+            &#128269; Scan Nodes
+          </button>
+          <button class="btn-tonal">
+            &#128203; Export Report
+          </button>
+          <button class="btn-filled">
+            &#43; Join Network
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card primary">
+          <div class="stat-card-header">
+            <span class="stat-card-label">Active Nodes</span>
+            <div class="stat-card-icon">&#128225;</div>
+          </div>
+          <div class="stat-card-value">142</div>
+          <div class="stat-card-sub">
+            <span class="trend-up">&#9650; 12%</span> from last week
+          </div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-card-header">
+            <span class="stat-card-label">Tokens Generated</span>
+            <div class="stat-card-icon">&#9889;</div>
+          </div>
+          <div class="stat-card-value">2.4M</div>
+          <div class="stat-card-sub">
+            <span class="trend-up">&#9650; 34%</span> from yesterday
+          </div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-card-header">
+            <span class="stat-card-label">Network Latency</span>
+            <div class="stat-card-icon">&#128200;</div>
+          </div>
+          <div class="stat-card-value">47<span style="font-size:20px">ms</span></div>
+          <div class="stat-card-sub">
+            P95: 112ms &middot; Jitter: 18ms
+          </div>
+        </div>
+        <div class="stat-card accent">
+          <div class="stat-card-header">
+            <span class="stat-card-label">Credits Earned Today</span>
+            <div class="stat-card-icon">&#128176;</div>
+          </div>
+          <div class="stat-card-value">1,247</div>
+          <div class="stat-card-sub">
+            ~124M tokens &middot; 0.008 cr/token
+          </div>
+        </div>
+      </div>
+
+      <!-- Two-Column Layout -->
+      <div class="content-grid">
+        <!-- Left: Network Topology -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Swarm Topology</h3>
+            <div style="display:flex;gap:8px">
+              <button class="btn-icon" title="Refresh">&#8635;</button>
+              <button class="btn-icon" title="Full screen">&#9974;</button>
+            </div>
+          </div>
+          <div class="card-body" style="padding:0">
+            <div class="topology-container" id="topology">
+              <!-- SVG Connections -->
+              <svg class="connection-svg" viewBox="0 0 800 400">
+                <line class="connection-line active" x1="120" y1="100" x2="280" y2="80"/>
+                <line class="connection-line active" x1="280" y1="80" x2="420" y2="160"/>
+                <line class="connection-line active" x1="420" y1="160" x2="580" y2="120"/>
+                <line class="connection-line active" x1="580" y1="120" x2="680" y2="200"/>
+                <line class="connection-line" x1="120" y1="100" x2="200" y2="300"/>
+                <line class="connection-line active" x1="200" y1="300" x2="350" y2="320"/>
+                <line class="connection-line" x1="350" y1="320" x2="520" y2="280"/>
+                <line class="connection-line active" x1="520" y1="280" x2="680" y2="200"/>
+                <line class="connection-line" x1="120" y1="100" x2="350" y2="320"/>
+                <line class="connection-line active" x1="420" y1="160" x2="520" y2="280"/>
+              </svg>
+
+              <!-- Nodes -->
+              <div class="node-element active" style="left:92px;top:72px">
+                <span class="node-id">BD-01</span>
+                <span class="node-tooltip">RTX 3090 &middot; 24GB &middot; 95% confidence</span>
+              </div>
+              <div class="node-element active" style="left:252px;top:52px">
+                <span class="node-id">BD-02</span>
+                <span class="node-tooltip">M3 Max &middot; 48GB &middot; 91% confidence</span>
+              </div>
+              <div class="node-element active" style="left:392px;top:132px">
+                <span class="node-id">BD-03</span>
+                <span class="node-tooltip">RTX 4090 &middot; 24GB &middot; 98% confidence</span>
+              </div>
+              <div class="node-element active" style="left:552px;top:92px">
+                <span class="node-id">BD-04</span>
+                <span class="node-tooltip">i9-14900K &middot; CPU-only &middot; 87% confidence</span>
+              </div>
+              <div class="node-element active" style="left:652px;top:172px">
+                <span class="node-id">BD-05</span>
+                <span class="node-tooltip">RX 7900XT &middot; 20GB &middot; 82% confidence</span>
+              </div>
+              <div class="node-element active" style="left:172px;top:272px">
+                <span class="node-id">BD-06</span>
+                <span class="node-tooltip">M2 Pro &middot; 32GB &middot; 79% confidence</span>
+              </div>
+              <div class="node-element warning" style="left:322px;top:292px">
+                <span class="node-id">BD-07</span>
+                <span class="node-tooltip">RTX 3060 &middot; 12GB &middot; 43% confidence &middot; HIGH JITTER</span>
+              </div>
+              <div class="node-element idle" style="left:492px;top:252px">
+                <span class="node-id">BD-08</span>
+                <span class="node-tooltip">Offline &middot; Last seen: 2h ago</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Ledger + Credits -->
+        <div style="display:flex;flex-direction:column;gap:24px">
+          <!-- Credit Co-op -->
+          <div class="card">
+            <div class="card-header">
+              <h3>Credit Co-op</h3>
+              <button class="btn-outlined" style="padding:6px 16px;font-size:13px">
+                &#128179; Top Up
+              </button>
+            </div>
+            <div class="card-body">
+              <div class="credit-summary">
+                <div class="credit-balance">
+                  4,832<span class="currency">cr</span>
+                </div>
+                <div class="credit-breakdown">
+                  <div class="credit-item">
+                    <span class="credit-item-label">Earned Today</span>
+                    <span class="credit-item-value" style="color:var(--md-sys-color-success)">+1,247</span>
+                  </div>
+                  <div class="credit-item">
+                    <span class="credit-item-label">Spent Today</span>
+                    <span class="credit-item-value" style="color:var(--md-sys-color-accent-rose)">-892</span>
+                  </div>
+                </div>
+              </div>
+              <div style="font:var(--md-sys-typescale-body-small);color:var(--md-sys-color-outline);margin-bottom:12px">
+                Offline Sync Status
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--md-sys-color-surface-container-low);border-radius:var(--md-sys-shape-corner-sm)">
+                <span style="color:var(--md-sys-color-success)">&#9679;</span>
+                <span style="font:var(--md-sys-typescale-body-medium);color:var(--md-sys-color-on-surface)">
+                  CCT Wallet: 350 cr available offline
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ledger Explorer -->
+          <div class="card">
+            <div class="card-header">
+              <h3>Ledger Explorer</h3>
+              <span style="font:var(--md-sys-typescale-body-small);color:var(--md-sys-color-outline)">
+                Merkle-DAG &middot; Argon2id PoW
+              </span>
+            </div>
+            <div class="card-body">
+              <div class="ledger-timeline">
+                <div class="ledger-block finalized">
+                  <div class="ledger-block-icon">&#10003;</div>
+                  <div class="ledger-block-content">
+                    <div class="ledger-block-title">Block #1,247</div>
+                    <div class="ledger-block-hash">0x7a3f...e91b &middot; sha256(prev=0x4d2c...)</div>
+                    <div class="ledger-block-meta">
+                      <span class="badge badge-finalized">Finalized</span>
+                      <span>BD-03 &middot; 2.4s ago</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="ledger-block finalized">
+                  <div class="ledger-block-icon">&#10003;</div>
+                  <div class="ledger-block-content">
+                    <div class="ledger-block-title">Block #1,246</div>
+                    <div class="ledger-block-hash">0x4d2c...f872 &middot; sha256(prev=0x9e1a...)</div>
+                    <div class="ledger-block-meta">
+                      <span class="badge badge-finalized">Finalized</span>
+                      <span>BD-01 &middot; 18s ago</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="ledger-block pending">
+                  <div class="ledger-block-icon">&#8987;</div>
+                  <div class="ledger-block-content">
+                    <div class="ledger-block-title">Block #1,248 (pending)</div>
+                    <div class="ledger-block-hash">0x0000...pending &middot; solving PoW...</div>
+                    <div class="ledger-block-meta">
+                      <span class="badge badge-pending">Pending</span>
+                      <span>Difficulty: 10 &middot; ETA: 1.8s</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Node Telemetry -->
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-header">
+          <h3>Node Telemetry</h3>
+          <div style="display:flex;gap:8px">
+            <button class="btn-icon" title="Sort">&#8645;</button>
+            <button class="btn-icon" title="Filter">&#128269;</button>
+          </div>
+        </div>
+        <div class="card-body" style="padding:12px 24px">
+          <div class="node-telemetry-list">
+            <div class="node-telemetry-item">
+              <div class="node-telemetry-name">
+                <span class="status-dot green"></span>
+                BD-03 &middot; RTX 4090
+              </div>
+              <div class="node-telemetry-metric">
+                <span class="metric-label">VRAM Used</span>
+                <span class="metric-value">18.2 / 24 GB</span>
+                <div class="confidence-bar"><div class="confidence-bar-fill high" style="width:76%"></div></div>
+              </div>
+              <div class="node-telemetry-metric">
+                <span class="metric-label">Tokens/sec</span>
+                <span class="metric-value">88.5</span>
+              </div>
+              <div class="node-telemetry-metric">
+                <span class="metric-label">Reliability</span>
+                <span class="metric-value" style="color:var(--md-sys-color-success)">98%</span>
+              </div>
+            </div>
+            <div class="node-telemetry-item">
+              <div class="node-telemetry-name">
+                <span class="status-dot green"></span>
+                BD-01 &middot; RTX 3090
+              </div>
+              <div class="node-telemetry-metric">
+                <span class="metric-label">VRAM Used</span>
+                <span class="metric-value">21.4 / 24 GB</span>
+                <div class="confidence-bar"><div class="confidence-bar-fill medium" style="width:89%"></div></div>
+              </div>
+              <div class="node-telemetry-metric">
+                <span class="metric-label">Tokens/sec</span>
+                <span class="metric-value">67.2</span>
+              </div>
+              <div class="node-telemetry-metric">
+                <span class="metric-label">Reliability</span>
+                <span class="metric-value" style="color:var(--md-sys-color-success)">95%</span>
+              </div>
+            </div>
+            <div class="node-telemetry-item">
+              <div class="node-telemetry-name">
+                <span class="status-dot yellow"></span>
+                BD-07 &middot; RTX 3060
+              </div>
+              <div class="node-telemetry-metric">
+                <span class="metric-label">VRAM Used</span>
+                <span class="metric-value">4.1 / 12 GB</span>
+                <div class="confidence-bar"><div class="confidence-bar-fill high" style="width:34%"></div></div>
+              </div>
+              <div class="node-telemetry-metric">
+                <span class="metric-label">Tokens/sec</span>
+                <span class="metric-value">12.8</span>
+              </div>
+              <div class="node-telemetry-metric">
+                <span class="metric-label">Reliability</span>
+                <span class="metric-value" style="color:var(--md-sys-color-warning)">43%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Bottom Nav — Mobile -->
+  <nav class="bottom-nav">
+    <button class="nav-rail-item active">
+      <span class="icon">&#9673;</span>
+      <span class="label">Mesh</span>
+    </button>
+    <button class="nav-rail-item">
+      <span class="icon">&#9881;</span>
+      <span class="label">Nodes</span>
+    </button>
+    <button class="nav-rail-item">
+      <span class="icon">&#128279;</span>
+      <span class="label">Ledger</span>
+    </button>
+    <button class="nav-rail-item">
+      <span class="icon">&#128176;</span>
+      <span class="label">Credits</span>
+    </button>
+    <button class="nav-rail-item">
+      <span class="icon">&#128736;</span>
+      <span class="label">Settings</span>
+    </button>
+  </nav>
+
+</body>
+</html>

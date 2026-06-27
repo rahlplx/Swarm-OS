@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Swarm-OS | Wallet &amp; Credits</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            background-color: #0b0e14;
+            color: #dee2ec;
+            -webkit-font-smoothing: antialiased;
+        }
+        .glass-panel {
+            background: rgba(22, 27, 34, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #30363d;
+        }
+        .industrial-button {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .industrial-button::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+            pointer-events: none;
+        }
+        .active-amount {
+            border-color: #4edea3;
+            background-color: rgba(78, 222, 163, 0.1);
+            box-shadow: 0 0 10px rgba(78, 222, 163, 0.2);
+        }
+        .status-scanline {
+            width: 100%;
+            height: 2px;
+            background: rgba(78, 222, 163, 0.5);
+            position: absolute;
+            animation: scan 3s linear infinite;
+        }
+        @keyframes scan {
+            0% { top: 0; opacity: 0; }
+            50% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0f141b;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 10px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-error": "#690005",
+                      "surface-container-lowest": "#090f15",
+                      "on-primary-fixed": "#001a42",
+                      "tertiary-fixed": "#ffddb8",
+                      "on-surface-variant": "#c2c6d6",
+                      "on-error-container": "#ffdad6",
+                      "surface-container-high": "#252a32",
+                      "inverse-surface": "#dee2ec",
+                      "secondary": "#4edea3",
+                      "primary-fixed-dim": "#adc6ff",
+                      "on-background": "#dee2ec",
+                      "primary": "#adc6ff",
+                      "error-container": "#93000a",
+                      "primary-fixed": "#d8e2ff",
+                      "outline-variant": "#424754",
+                      "on-tertiary-fixed-variant": "#653e00",
+                      "on-tertiary-container": "#3e2400",
+                      "on-tertiary-fixed": "#2a1700",
+                      "on-surface": "#dee2ec",
+                      "surface-container-highest": "#30353d",
+                      "on-secondary-container": "#00311f",
+                      "tertiary": "#ffb95f",
+                      "background": "#0f141b",
+                      "surface-container": "#1b2027",
+                      "secondary-fixed": "#6ffbbe",
+                      "inverse-primary": "#005ac2",
+                      "primary-container": "#4d8eff",
+                      "on-secondary-fixed-variant": "#005236",
+                      "on-tertiary": "#472a00",
+                      "on-primary": "#002e6a",
+                      "surface": "#0f141b",
+                      "on-secondary-fixed": "#002113",
+                      "surface-dim": "#0f141b",
+                      "surface-variant": "#30353d",
+                      "secondary-fixed-dim": "#4edea3",
+                      "on-secondary": "#003824",
+                      "on-primary-fixed-variant": "#004395",
+                      "error": "#ffb4ab",
+                      "inverse-on-surface": "#2c3138",
+                      "surface-container-low": "#171c23",
+                      "surface-tint": "#adc6ff",
+                      "secondary-container": "#00a572",
+                      "tertiary-container": "#ca8100",
+                      "surface-bright": "#343941",
+                      "outline": "#8c909f",
+                      "on-primary-container": "#00285d",
+                      "tertiary-fixed-dim": "#ffb95f"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "md": "16px",
+                      "unit": "4px",
+                      "margin-desktop": "32px",
+                      "sm": "8px",
+                      "xl": "32px",
+                      "margin-mobile": "16px",
+                      "lg": "24px",
+                      "xs": "4px",
+                      "gutter": "16px"
+              },
+              "fontFamily": {
+                      "headline-sm": ["Inter"],
+                      "mono-data": ["JetBrains Mono"],
+                      "headline-md": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "mono-label": ["JetBrains Mono"],
+                      "button-text": ["Inter"],
+                      "body-md": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                      "mono-data": ["12px", {"lineHeight": "14px", "fontWeight": "400"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                      "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "mono-label": ["13px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "button-text": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-on-background custom-scrollbar overflow-x-hidden">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-background border-b border-outline-variant flex items-center justify-between px-margin-mobile h-16 transition-colors duration-200">
+<div class="flex items-center gap-md">
+<button class="hover:bg-surface-container-high p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined text-primary">menu</span>
+</button>
+<h1 class="font-headline-sm text-headline-sm text-primary">Wallet &amp; Credits</h1>
+</div>
+<button class="hover:bg-surface-container-high p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined text-primary">account_balance_wallet</span>
+</button>
+</header>
+<main class="mt-16 pb-40 px-margin-mobile max-w-2xl mx-auto space-y-lg pt-md">
+<!-- Current Balance Card -->
+<div class="relative overflow-hidden glass-panel rounded-xl p-lg border border-outline-variant">
+<div class="status-scanline opacity-20"></div>
+<div class="flex flex-col gap-xs">
+<span class="font-mono-label text-mono-label text-on-surface-variant uppercase tracking-wider">Current Balance</span>
+<div class="flex items-baseline gap-sm">
+<span class="font-headline-lg text-headline-lg text-secondary">৳342</span>
+<span class="font-mono-data text-mono-data text-on-surface-variant">NODE_CREDITS_v3</span>
+</div>
+</div>
+<div class="mt-lg pt-md border-t border-outline-variant/30 flex justify-between items-center">
+<div class="flex gap-md">
+<div class="flex flex-col">
+<span class="text-[10px] uppercase font-bold text-on-surface-variant">Tier</span>
+<span class="font-mono-label text-mono-label text-primary">ORCHESTRATOR_III</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] uppercase font-bold text-on-surface-variant">Region</span>
+<span class="font-mono-label text-mono-label text-tertiary">BD_SOUTH</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline animate-pulse" style="font-variation-settings: 'FILL' 1;">sensors</span>
+</div>
+</div>
+<!-- Amount Selection -->
+<section class="space-y-md">
+<h2 class="font-mono-label text-mono-label text-on-surface-variant uppercase flex items-center gap-sm">
+<span class="material-symbols-outlined text-sm">add_circle</span> Select Amount
+            </h2>
+<div class="grid grid-cols-2 gap-md">
+<button class="industrial-button h-16 glass-panel flex flex-col items-center justify-center border border-outline-variant rounded-lg hover:border-primary transition-all active:scale-95 group" onclick="selectAmount(this)">
+<span class="font-headline-sm text-headline-sm group-hover:text-primary transition-colors">৳100</span>
+<span class="text-[9px] uppercase font-bold text-outline">Utility Pack</span>
+</button>
+<button class="industrial-button h-16 glass-panel flex flex-col items-center justify-center border border-outline-variant rounded-lg hover:border-primary transition-all active:scale-95 group" onclick="selectAmount(this)">
+<span class="font-headline-sm text-headline-sm group-hover:text-primary transition-colors">৳250</span>
+<span class="text-[9px] uppercase font-bold text-outline">Standard Feed</span>
+</button>
+<button class="industrial-button h-16 glass-panel flex flex-col items-center justify-center border border-outline-variant rounded-lg hover:border-primary transition-all active:scale-95 group active-amount" onclick="selectAmount(this)">
+<span class="font-headline-sm text-headline-sm text-secondary">৳500</span>
+<span class="text-[9px] uppercase font-bold text-secondary/60">Pro Load</span>
+</button>
+<button class="industrial-button h-16 glass-panel flex flex-col items-center justify-center border border-outline-variant rounded-lg hover:border-primary transition-all active:scale-95 group" onclick="selectAmount(this)">
+<span class="font-headline-sm text-headline-sm group-hover:text-primary transition-colors">৳1,000</span>
+<span class="text-[9px] uppercase font-bold text-outline">Enterprise Hub</span>
+</button>
+</div>
+</section>
+<!-- Payment Methods -->
+<section class="space-y-md">
+<h2 class="font-mono-label text-mono-label text-on-surface-variant uppercase flex items-center gap-sm">
+<span class="material-symbols-outlined text-sm">payments</span> Payment Gateway
+            </h2>
+<div class="space-y-sm">
+<!-- bKash -->
+<button class="w-full h-14 flex items-center justify-between px-md glass-panel border border-outline-variant rounded-lg hover:bg-surface-container-high transition-all group">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded bg-[#D12053] flex items-center justify-center">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">account_balance_wallet</span>
+</div>
+<div class="flex flex-col items-start">
+<span class="font-button-text text-button-text font-bold">bKash Checkout</span>
+<span class="text-[10px] text-on-surface-variant uppercase tracking-tighter">Mobile Finance Gateway</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform">chevron_right</span>
+</button>
+<!-- Nagad -->
+<button class="w-full h-14 flex items-center justify-between px-md glass-panel border border-outline-variant rounded-lg hover:bg-surface-container-high transition-all group">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded bg-[#F15A22] flex items-center justify-center">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">send_to_mobile</span>
+</div>
+<div class="flex flex-col items-start">
+<span class="font-button-text text-button-text font-bold">Nagad Wallet</span>
+<span class="text-[10px] text-on-surface-variant uppercase tracking-tighter">Digital Transaction Hub</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform">chevron_right</span>
+</button>
+<!-- SSLCommerz -->
+<button class="w-full h-14 flex items-center justify-between px-md glass-panel border border-outline-variant rounded-lg hover:bg-surface-container-high transition-all group">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded bg-surface-container-highest border border-outline-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">credit_card</span>
+</div>
+<div class="flex flex-col items-start">
+<span class="font-button-text text-button-text font-bold">SSLCommerz</span>
+<span class="text-[10px] text-on-surface-variant uppercase tracking-tighter">Cards &amp; Net Banking</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- Transaction History -->
+<section class="space-y-md">
+<h2 class="font-mono-label text-mono-label text-on-surface-variant uppercase flex items-center gap-sm">
+<span class="material-symbols-outlined text-sm">history</span> Recent Transactions
+            </h2>
+<div class="glass-panel border border-outline-variant rounded-xl divide-y divide-outline-variant/30">
+<div class="p-md flex justify-between items-center">
+<div class="flex gap-md">
+<div class="w-8 h-8 rounded-full bg-secondary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-sm">add</span>
+</div>
+<div class="flex flex-col">
+<span class="font-button-text text-button-text font-medium">Credit Purchase</span>
+<span class="font-mono-data text-[10px] text-on-surface-variant">Oct 24, 2023 | 14:22:01</span>
+</div>
+</div>
+<span class="font-mono-data text-secondary font-bold">+৳500</span>
+</div>
+<div class="p-md flex justify-between items-center">
+<div class="flex gap-md">
+<div class="w-8 h-8 rounded-full bg-error-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-error text-sm">bolt</span>
+</div>
+<div class="flex flex-col">
+<span class="font-button-text text-button-text font-medium">Compute Consumption</span>
+<span class="font-mono-data text-[10px] text-on-surface-variant">Oct 22, 2023 | 09:15:44</span>
+</div>
+</div>
+<span class="font-mono-data text-error font-bold">-৳120</span>
+</div>
+<div class="p-md flex justify-between items-center">
+<div class="flex gap-md">
+<div class="w-8 h-8 rounded-full bg-secondary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-sm">add</span>
+</div>
+<div class="flex flex-col">
+<span class="font-button-text text-button-text font-medium">Credit Purchase</span>
+<span class="font-mono-data text-[10px] text-on-surface-variant">Oct 18, 2023 | 20:05:12</span>
+</div>
+</div>
+<span class="font-mono-data text-secondary font-bold">+৳250</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Buy Button Area -->
+<div class="fixed bottom-20 w-full px-margin-mobile z-40 py-md bg-gradient-to-t from-background via-background/90 to-transparent">
+<button class="w-full bg-primary text-on-primary py-lg rounded-lg font-button-text text-button-text font-bold shadow-lg shadow-primary/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-md">
+<span class="material-symbols-outlined">shopping_cart</span>
+            BUY CREDITS
+        </button>
+</div>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface-container-low border-t border-outline-variant flex justify-around items-center h-20 px-4">
+<button class="flex flex-col items-center justify-center text-on-surface-variant p-2 active:scale-95 transition-transform hover:text-secondary">
+<span class="material-symbols-outlined">hub</span>
+<span class="font-mono-label text-[10px]">Nodes</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant p-2 active:scale-95 transition-transform hover:text-secondary">
+<span class="material-symbols-outlined">account_tree</span>
+<span class="font-mono-label text-[10px]">Orchestra</span>
+</button>
+<button class="flex flex-col items-center justify-center text-secondary bg-on-secondary-container/10 rounded-xl p-2 active:scale-95 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_balance_wallet</span>
+<span class="font-mono-label text-[10px]">Wallet</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant p-2 active:scale-95 transition-transform hover:text-secondary">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-mono-label text-[10px]">Settings</span>
+</button>
+</nav>
+<script>
+        function selectAmount(element) {
+            // Remove active class from all amount buttons
+            document.querySelectorAll('.active-amount').forEach(btn => {
+                btn.classList.remove('active-amount');
+                btn.querySelector('span:first-child').classList.remove('text-secondary');
+                btn.querySelector('span:first-child').classList.add('group-hover:text-primary');
+                btn.querySelector('span:last-child').classList.remove('text-secondary/60');
+                btn.querySelector('span:last-child').classList.add('text-outline');
+            });
+            
+            // Add active class to selected button
+            element.classList.add('active-amount');
+            element.querySelector('span:first-child').classList.add('text-secondary');
+            element.querySelector('span:first-child').classList.remove('group-hover:text-primary');
+            element.querySelector('span:last-child').classList.add('text-secondary/60');
+            element.querySelector('span:last-child').classList.remove('text-outline');
+        }
+
+        // Ripple Effect for Industrial Buttons
+        document.querySelectorAll('.industrial-button').forEach(button => {
+            button.addEventListener('click', function(e) {
+                let ripple = document.createElement('span');
+                ripple.style.position = 'absolute';
+                ripple.style.background = 'rgba(255, 255, 255, 0.1)';
+                ripple.style.width = '100px';
+                ripple.style.height = '100px';
+                ripple.style.borderRadius = '50%';
+                ripple.style.transform = 'scale(0)';
+                ripple.style.animation = 'ripple 0.6s linear';
+                ripple.style.pointerEvents = 'none';
+                
+                let rect = this.getBoundingClientRect();
+                ripple.style.left = e.clientX - rect.left - 50 + 'px';
+                ripple.style.top = e.clientY - rect.top - 50 + 'px';
+                
+                this.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 600);
+            });
+        });
+
+        // Add custom keyframe for ripple
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @keyframes ripple {
+                to { transform: scale(4); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body></html>

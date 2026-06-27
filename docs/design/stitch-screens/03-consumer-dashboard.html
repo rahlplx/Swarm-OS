@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>CORE_NODE_OS | Swarm-OS Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Include Theme Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "error": "#ffb4ab",
+                "on-primary-fixed-variant": "#004395",
+                "secondary-fixed-dim": "#4edea3",
+                "surface-container-low": "#171c23",
+                "surface-container-highest": "#30353d",
+                "surface-container-high": "#252a32",
+                "on-background": "#dee2ec",
+                "inverse-on-surface": "#2c3138",
+                "surface-dim": "#0f141b",
+                "tertiary-fixed-dim": "#ffb95f",
+                "outline": "#8c909f",
+                "on-secondary": "#003824",
+                "secondary-container": "#00a572",
+                "on-primary": "#002e6a",
+                "on-error-container": "#ffdad6",
+                "on-secondary-container": "#00311f",
+                "on-secondary-fixed-variant": "#005236",
+                "surface": "#0f141b",
+                "tertiary-fixed": "#ffddb8",
+                "primary": "#adc6ff",
+                "on-surface-variant": "#c2c6d6",
+                "on-error": "#690005",
+                "surface-tint": "#adc6ff",
+                "on-tertiary-fixed": "#2a1700",
+                "on-secondary-fixed": "#002113",
+                "tertiary-container": "#ca8100",
+                "surface-bright": "#343941",
+                "surface-container": "#1b2027",
+                "inverse-primary": "#005ac2",
+                "surface-surface": "#dee2ec",
+                "tertiary": "#ffb95f",
+                "primary-fixed": "#d8e2ff",
+                "on-tertiary-container": "#3e2400",
+                "on-tertiary": "#472a00",
+                "on-tertiary-fixed-variant": "#653e00",
+                "on-primary-fixed": "#001a42",
+                "error-container": "#93000a",
+                "secondary": "#4edea3",
+                "on-surface": "#dee2ec",
+                "on-primary-container": "#00285d",
+                "primary-container": "#4d8eff",
+                "secondary-fixed": "#6ffbbe",
+                "inverse-surface": "#dee2ec",
+                "primary-fixed-dim": "#adc6ff",
+                "surface-container-lowest": "#090f15",
+                "background": "#0f141b",
+                "outline-variant": "#424754"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+            },
+            "spacing": {
+                "margin-mobile": "16px",
+                "sm": "8px",
+                "gutter": "16px",
+                "md": "16px",
+                "xs": "4px",
+                "unit": "4px",
+                "lg": "24px",
+                "margin-desktop": "32px",
+                "xl": "32px"
+            },
+            "fontFamily": {
+                "mono-label": ["JetBrains Mono"],
+                "headline-lg": ["Inter"],
+                "mono-data": ["JetBrains Mono"],
+                "headline-md": ["Inter"],
+                "body-sm": ["Inter"],
+                "headline-sm": ["Inter"],
+                "button-text": ["Inter"],
+                "body-md": ["Inter"],
+                "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                "mono-label": ["13px", {"lineHeight": "16px", "fontWeight": "500"}],
+                "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                "mono-data": ["12px", {"lineHeight": "14px", "fontWeight": "400"}],
+                "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                "button-text": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #0f141b;
+            color: #dee2ec;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        .glass-card {
+            background: rgba(22, 27, 34, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #30363D;
+        }
+        .code-block {
+            background: #090f15;
+            border: 1px solid #30363D;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .sparkline {
+            height: 32px;
+            width: 100%;
+        }
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="font-body-md text-body-md overflow-x-hidden pb-20">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-margin-mobile h-14 bg-surface-container-low border-b border-outline-variant">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">terminal</span>
+<span class="font-mono-label text-mono-label tracking-tighter text-secondary">CORE_NODE_OS</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-on-surface-variant hover:bg-surface-container-highest transition-colors p-2 rounded-full">search</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:bg-surface-container-highest transition-colors p-2 rounded-full">settings</button>
+</div>
+</header>
+<main class="mt-14 p-margin-mobile space-y-gutter">
+<!-- Credit Balance Hero -->
+<section class="relative overflow-hidden rounded-xl p-lg bg-surface-container-high border border-outline-variant shadow-2xl">
+
+<div class="relative z-10">
+<p class="font-mono-label text-mono-label text-on-surface-variant mb-2 uppercase tracking-widest">Available Credits</p>
+<h1 class="font-headline-lg text-headline-lg text-primary mb-1">৳198,400.00</h1>
+<div class="flex items-center gap-2">
+<span class="font-mono-data text-mono-data px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container">2,450.00 CRED</span>
+<span class="material-symbols-outlined text-[16px] text-secondary">trending_up</span>
+</div>
+</div>
+<button class="absolute bottom-lg right-lg bg-primary text-on-primary rounded-lg px-4 py-2 font-button-text text-button-text flex items-center gap-2 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[20px]">add_card</span>
+                Top Up
+            </button>
+</section>
+<!-- Analytics Bento Grid -->
+<section class="grid grid-cols-2 gap-xs">
+<div class="glass-card p-md rounded-lg flex flex-col justify-between h-32 col-span-1">
+<div>
+<p class="font-mono-label text-mono-label text-on-surface-variant uppercase">Tokens</p>
+<h3 class="font-headline-sm text-headline-sm">1.2M</h3>
+</div>
+<div class="sparkline flex items-end gap-1">
+<div class="w-full bg-primary/20 h-2 rounded-t-sm"></div>
+<div class="w-full bg-primary/40 h-4 rounded-t-sm"></div>
+<div class="w-full bg-primary/30 h-3 rounded-t-sm"></div>
+<div class="w-full bg-primary/60 h-6 rounded-t-sm"></div>
+<div class="w-full bg-primary/100 h-8 rounded-t-sm"></div>
+</div>
+</div>
+<div class="glass-card p-md rounded-lg flex flex-col justify-between h-32 col-span-1">
+<div>
+<p class="font-mono-label text-mono-label text-on-surface-variant uppercase">Requests</p>
+<h3 class="font-headline-sm text-headline-sm">48.2k</h3>
+</div>
+<div class="sparkline flex items-end gap-1">
+<div class="w-full bg-secondary/30 h-3 rounded-t-sm"></div>
+<div class="w-full bg-secondary/100 h-7 rounded-t-sm"></div>
+<div class="w-full bg-secondary/60 h-5 rounded-t-sm"></div>
+<div class="w-full bg-secondary/80 h-6 rounded-t-sm"></div>
+<div class="w-full bg-secondary/40 h-2 rounded-t-sm"></div>
+</div>
+</div>
+<div class="glass-card p-md rounded-lg flex flex-col justify-between h-32 col-span-2">
+<div class="flex justify-between items-start">
+<div>
+<p class="font-mono-label text-mono-label text-on-surface-variant uppercase">Accrued Cost</p>
+<h3 class="font-headline-sm text-headline-sm">৳4,250.40</h3>
+</div>
+<span class="font-mono-data text-mono-data text-error bg-error-container/20 px-2 py-0.5 rounded">Budget Alert: 85%</span>
+</div>
+<div class="w-full bg-outline-variant h-1 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[85%] transition-all duration-1000"></div>
+</div>
+</div>
+</section>
+<!-- Model Selection Horizontal Scroll -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h2 class="font-headline-sm text-headline-sm">Available Models</h2>
+<button class="text-primary font-button-text text-button-text">View All</button>
+</div>
+<div class="flex overflow-x-auto gap-gutter pb-4 -mx-margin-mobile px-margin-mobile">
+<!-- Model Card 1 -->
+<div class="min-w-[240px] glass-card p-md rounded-xl space-y-4">
+<div class="flex justify-between items-center">
+<span class="font-mono-label text-mono-label text-secondary">LLAMA-3-70B</span>
+<span class="material-symbols-outlined text-on-surface-variant">memory</span>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between text-body-sm">
+<span class="text-on-surface-variant">VRAM</span>
+<span class="font-mono-data text-on-surface">80GB</span>
+</div>
+<div class="flex justify-between text-body-sm">
+<span class="text-on-surface-variant">Latency</span>
+<span class="font-mono-data text-on-surface">140ms</span>
+</div>
+</div>
+<button class="w-full py-2 border border-outline-variant rounded-lg font-button-text text-button-text hover:bg-surface-container-highest transition-colors">Select Cluster</button>
+</div>
+<!-- Model Card 2 -->
+<div class="min-w-[240px] glass-card p-md rounded-xl space-y-4">
+<div class="flex justify-between items-center">
+<span class="font-mono-label text-mono-label text-secondary">BERT-LARGE</span>
+<span class="material-symbols-outlined text-on-surface-variant">psychology</span>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between text-body-sm">
+<span class="text-on-surface-variant">VRAM</span>
+<span class="font-mono-data text-on-surface">24GB</span>
+</div>
+<div class="flex justify-between text-body-sm">
+<span class="text-on-surface-variant">Latency</span>
+<span class="font-mono-data text-on-surface">12ms</span>
+</div>
+</div>
+<button class="w-full py-2 border border-outline-variant rounded-lg font-button-text text-button-text hover:bg-surface-container-highest transition-colors">Select Cluster</button>
+</div>
+</div>
+</section>
+<!-- API Keys Management -->
+<section class="glass-card rounded-xl overflow-hidden border border-outline-variant">
+<div class="px-md py-lg border-b border-outline-variant flex justify-between items-center bg-surface-container">
+<h2 class="font-headline-sm text-headline-sm">API Keys</h2>
+<button class="flex items-center gap-1 text-primary font-button-text text-button-text">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Create New
+                </button>
+</div>
+<div class="divide-y divide-outline-variant">
+<div class="p-md flex items-center justify-between">
+<div class="space-y-1">
+<p class="font-mono-label text-mono-label">PROD_ENV_SWARM</p>
+<p class="font-mono-data text-body-sm text-on-surface-variant">sk_live_••••••••••••3a9c</p>
+</div>
+<div class="flex gap-2">
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:text-primary transition-colors">content_copy</button>
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:text-error transition-colors">block</button>
+</div>
+</div>
+<div class="p-md flex items-center justify-between">
+<div class="space-y-1">
+<p class="font-mono-label text-mono-label">STAGING_TEST</p>
+<p class="font-mono-data text-body-sm text-on-surface-variant">sk_test_••••••••••••92f1</p>
+</div>
+<div class="flex gap-2">
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:text-primary transition-colors">content_copy</button>
+<button class="material-symbols-outlined p-2 text-on-surface-variant hover:text-error transition-colors">block</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Quick Start Snippet -->
+<section class="space-y-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">bolt</span>
+<h2 class="font-headline-sm text-headline-sm">Quick Start</h2>
+</div>
+<div class="code-block rounded-xl overflow-hidden shadow-inner">
+<div class="flex justify-between items-center px-md py-2 border-b border-outline-variant bg-surface-container-highest/20">
+<span class="text-mono-label font-mono-label text-on-surface-variant">main.py</span>
+<span class="material-symbols-outlined text-body-sm cursor-pointer hover:text-primary">content_copy</span>
+</div>
+<pre class="p-md overflow-x-auto text-mono-data whitespace-pre"><span class="text-primary">import</span> swarm_os
+
+client = swarm_os.Client(api_key=<span class="text-secondary">"sk_..."</span>)
+
+response = client.completions.create(
+    model=<span class="text-secondary">"llama-3-70b"</span>,
+    prompt=<span class="text-secondary">"Analyze swarm data..."</span>
+)
+
+<span class="text-on-surface-variant"># Process node results</span>
+<span class="text-primary">print</span>(response.clusters)
+                </pre>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 px-4 pb-safe bg-surface-container-low border-t border-outline-variant">
+<div class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-xl px-4 py-1 scale-95 transition-transform cursor-pointer">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dns</span>
+<span class="font-body-sm text-body-sm">Nodes</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface active:scale-90 transition-transform cursor-pointer">
+<span class="material-symbols-outlined">query_stats</span>
+<span class="font-body-sm text-body-sm">Metrics</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface active:scale-90 transition-transform cursor-pointer">
+<span class="material-symbols-outlined">history_edu</span>
+<span class="font-body-sm text-body-sm">Logs</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface active:scale-90 transition-transform cursor-pointer">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-body-sm text-body-sm">Wallet</span>
+</div>
+</nav>
+<script>
+        // Simple micro-interaction for sparkline data pulsing
+        setInterval(() => {
+            document.querySelectorAll('.sparkline div').forEach(bar => {
+                const randomHeight = Math.floor(Math.random() * 80) + 20;
+                bar.style.height = `${randomHeight}%`;
+                bar.style.transition = 'height 0.8s ease-in-out';
+            });
+        }, 2000);
+
+        // Feedback for copy buttons
+        document.querySelectorAll('.material-symbols-outlined').forEach(btn => {
+            if(btn.innerText === 'content_copy') {
+                btn.addEventListener('click', function() {
+                    const originalIcon = this.innerText;
+                    this.innerText = 'check';
+                    this.classList.add('text-secondary');
+                    setTimeout(() => {
+                        this.innerText = originalIcon;
+                        this.classList.remove('text-secondary');
+                    }, 1500);
+                });
+            }
+        });
+    </script>
+</body></html>

@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "membership",
+    "ledger",
+    "offline-wallet",
+]
+resolver = "2"
+
+[workspace.dependencies]
+serde = { version = "=1.0.217", features = ["derive"] }

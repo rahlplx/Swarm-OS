@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swarm-OS — Admin Portal</title>
+<style>
+  :root{--p:#B8C9FF;--op:#002E6A;--pc:#004593;--opc:#D6E3FF;--s:#C0C6DD;--os2:#2C3249;--sc:#42485F;--osc:#DCE2F9;--err:#FFB4AB;--oerr:#690005;--errc:#93000A;--oeerrc:#FFDAD6;--bg:#0B1120;--obg:#E2E2E9;--sf:#111827;--osf:#E2E2E9;--sfv:#1F2937;--osfv:#C3C5D0;--ol:#8D9099;--olv:#44474E;--scl:#161D2E;--sc2:#1C2536;--sch:#242E40;--schst:#2C3749;--ok:#A8DAB5;--okc:#1B5E3A;--wn:#FFCC80;--wnc:#7A5800;--aa:#FFB800;--ar:#FF4D4D;--at:#00C4B4;--rxl:28px;--rlg:16px;--rmd:12px;--rsm:8px}
+  @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Google Sans',-apple-system,sans-serif;background:var(--bg);color:var(--obg);min-height:100vh}
+  .top-bar{position:fixed;top:0;left:0;right:0;height:64px;background:var(--sf);border-bottom:1px solid var(--olv);display:flex;align-items:center;padding:0 16px;z-index:100}
+  .top-bar h1{font-size:20px;font-weight:500;color:var(--osf)}
+  .top-bar .sep{font-size:14px;color:var(--ol);margin:0 12px}
+  .layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh;padding-top:64px}
+  .sidebar{background:var(--scl);border-right:1px solid var(--olv);padding:16px 0}
+  .sidebar-item{display:flex;align-items:center;gap:12px;padding:12px 20px;font-size:14px;color:var(--osfv);cursor:pointer;transition:all 0.2s;border-left:3px solid transparent}
+  .sidebar-item.active{background:color-mix(in srgb,var(--pc) 15%,var(--scl));color:var(--p);border-left-color:var(--p)}
+  .sidebar-item:hover:not(.active){background:var(--sc2)}
+  .sidebar-item .icon{font-size:18px;width:24px;text-align:center}
+  .sidebar-section{font-size:11px;color:var(--ol);padding:16px 20px 8px;text-transform:uppercase;letter-spacing:0.5px}
+  .main{padding:24px 32px;overflow-y:auto}
+  .card{background:var(--sc2);border-radius:var(--rxl);border:1px solid var(--olv);overflow:hidden;margin-bottom:24px}
+  .card-h{padding:20px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--olv)}
+  .card-h h3{font-size:16px;font-weight:500;color:var(--osf)}
+  .card-b{padding:24px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px}
+  .badge{padding:4px 12px;border-radius:99px;font-size:12px;font-weight:500}
+  .badge-ok{background:color-mix(in srgb,var(--okc) 40%,transparent);color:var(--ok)}
+  .badge-wn{background:color-mix(in srgb,var(--wnc) 40%,transparent);color:var(--wn)}
+  .badge-p{background:color-mix(in srgb,var(--pc) 40%,transparent);color:var(--p)}
+  .badge-er{background:color-mix(in srgb,var(--errc) 40%,transparent);color:var(--err)}
+  .badge-ol{border:1px solid var(--ol);color:var(--ol)}
+  .btn{padding:10px 24px;border-radius:var(--rxl);font-size:14px;font-weight:500;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+  .btn-f{background:var(--p);color:var(--op)}
+  .btn-t{background:var(--sc);color:var(--osc)}
+  .btn-o{background:transparent;color:var(--p);border:1px solid var(--ol)}
+  .btn-d{background:var(--errc);color:var(--oeerrc)}
+  .btn-i{width:36px;height:36px;border-radius:50%;border:none;background:transparent;color:var(--osfv);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+  .table{width:100%;border-collapse:collapse}
+  .table th{text-align:left;padding:12px 16px;font-size:12px;color:var(--ol);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--olv)}
+  .table td{padding:12px 16px;font-size:14px;color:var(--osf);border-bottom:1px solid var(--olv)}
+  .table tr:hover td{background:var(--scl)}
+  .table .mono{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ol)}
+  .stat-box{padding:24px;background:var(--scl);border-radius:var(--rlg);text-align:center}
+  .stat-box-label{font-size:12px;color:var(--ol);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}
+  .stat-box-value{font-size:36px;font-weight:500;line-height:1}
+  .stat-box-sub{font-size:12px;color:var(--ol);margin-top:6px}
+  .bar{height:6px;background:var(--schst);border-radius:99px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:99px}
+  .bar-fill.g{background:var(--ok)} .bar-fill.w{background:var(--wn)} .bar-fill.r{background:var(--ar)} .bar-fill.b{background:var(--p)}
+  .payment-row{display:flex;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid var(--olv)}
+  .payment-row:last-child{border:none}
+  .alert-item{display:flex;gap:12px;padding:12px 16px;border-radius:var(--rmd);margin-bottom:8px}
+  .alert-item.er{background:color-mix(in srgb,var(--errc) 20%,var(--scl));border-left:3px solid var(--ar)}
+  .alert-item.wn{background:color-mix(in srgb,var(--wnc) 20%,var(--scl));border-left:3px solid var(--wn)}
+  .alert-item.ok{background:color-mix(in srgb,var(--okc) 20%,var(--scl));border-left:3px solid var(--ok)}
+</style>
+</head>
+<body>
+  <header class="top-bar">
+    <h1>Swarm-OS</h1>
+    <span class="sep">/ Admin Portal</span>
+    <div style="margin-left:auto;display:flex;gap:12px;align-items:center">
+      <span class="badge badge-ok">&#9679; System Healthy</span>
+      <span style="font-size:14px;color:var(--osf)">ops@swarm-os.dev</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Overview</div>
+      <div class="sidebar-item active"><span class="icon">&#9673;</span> Dashboard</div>
+      <div class="sidebar-item"><span class="icon">&#128200;</span> Analytics</div>
+      <div class="sidebar-section">Management</div>
+      <div class="sidebar-item"><span class="icon">&#128225;</span> Nodes</div>
+      <div class="sidebar-item"><span class="icon">&#128100;</span> Users</div>
+      <div class="sidebar-item"><span class="icon">&#128273;</span> API Keys</div>
+      <div class="sidebar-item"><span class="icon">&#128279;</span> Ledger Audit</div>
+      <div class="sidebar-section">Finance</div>
+      <div class="sidebar-item"><span class="icon">&#128176;</span> Credit Ledger</div>
+      <div class="sidebar-item"><span class="icon">&#128179;</span> BDT Payments</div>
+      <div class="sidebar-item"><span class="icon">&#128177;</span> Payouts</div>
+      <div class="sidebar-section">System</div>
+      <div class="sidebar-item"><span class="icon">&#128736;</span> Settings</div>
+      <div class="sidebar-item"><span class="icon">&#128227;</span> Alerts</div>
+      <div class="sidebar-item"><span class="icon">&#128196;</span> Logs</div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+      <h2 style="font-size:24px;font-weight:500;margin-bottom:24px">Dashboard Overview</h2>
+
+      <!-- Top Stats -->
+      <div class="grid3">
+        <div class="stat-box">
+          <div class="stat-box-label">Total Nodes</div>
+          <div class="stat-box-value" style="color:var(--p)">142</div>
+          <div class="stat-box-sub">128 active &middot; 12 idle &middot; 2 blacklisted</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-label">Registered Users</div>
+          <div class="stat-box-value" style="color:var(--ok)">524</div>
+          <div class="stat-box-sub">+38 this week &middot; 89% retention</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-label">Daily Revenue (BDT)</div>
+          <div class="stat-box-value" style="color:var(--aa)">&#2547;18,420</div>
+          <div class="stat-box-sub">~$167 USD &middot; +12% from yesterday</div>
+        </div>
+      </div>
+
+      <div class="grid3">
+        <div class="stat-box">
+          <div class="stat-box-label">Tokens Generated (24h)</div>
+          <div class="stat-box-value" style="color:var(--at)">24.8M</div>
+          <div class="stat-box-sub">Across 128 nodes</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-label">Credits Issued (24h)</div>
+          <div class="stat-box-value" style="color:var(--ok)">198.4K</div>
+          <div class="stat-box-sub">Platform spread: 20%</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-label">P95 Latency</div>
+          <div class="stat-box-value" style="color:var(--wn)">112<span style="font-size:16px">ms</span></div>
+          <div class="stat-box-sub">SLA target: &lt;200ms</div>
+        </div>
+      </div>
+
+      <!-- Alerts -->
+      <div class="card">
+        <div class="card-h"><h3>Active Alerts</h3><span class="badge badge-er">2 Active</span></div>
+        <div class="card-b">
+          <div class="alert-item er">
+            <span style="font-size:18px">&#9888;</span>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:500;color:var(--err)">High Jitter — BD-07</div>
+              <div style="font-size:12px;color:var(--ol)">Network latency 247ms (threshold: 100ms) for 15 minutes</div>
+            </div>
+            <span class="badge badge-er">Critical</span>
+            <button class="btn btn-o" style="padding:6px 16px;font-size:12px">Blacklist</button>
+          </div>
+          <div class="alert-item wn">
+            <span style="font-size:18px">&#9888;</span>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:500;color:var(--wn)">Credit Balance Low — 3 Users</div>
+              <div style="font-size:12px;color:var(--ol)">3 users below 50 cr threshold. Auto-email sent.</div>
+            </div>
+            <span class="badge badge-wn">Warning</span>
+          </div>
+          <div class="alert-item ok">
+            <span style="font-size:18px">&#10003;</span>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:500;color:var(--ok)">BD-08 Reconnected</div>
+              <div style="font-size:12px;color:var(--ol)">Node rejoined after 2h offline. Health check passed.</div>
+            </div>
+            <span class="badge badge-ok">Resolved</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <!-- Node Management -->
+        <div class="card">
+          <div class="card-h">
+            <h3>Node Management</h3>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-o" style="padding:6px 16px;font-size:12px">&#128269; Filter</button>
+              <button class="btn btn-f" style="padding:6px 16px;font-size:12px">&#128203; Export</button>
+            </div>
+          </div>
+          <div class="card-b" style="padding:0">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Node</th>
+                  <th>Hardware</th>
+                  <th>Status</th>
+                  <th>Score</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>BD-03</strong><br><span class="mono">swrm_node_9f2a...</span></td>
+                  <td>RTX 4090 &middot; 24GB</td>
+                  <td><span class="badge badge-ok">&#9679; Active</span></td>
+                  <td><strong style="color:var(--ok)">98</strong></td>
+                  <td><button class="btn-i" title="View">&#128065;</button><button class="btn-i" title="Edit">&#9998;</button></td>
+                </tr>
+                <tr>
+                  <td><strong>BD-01</strong><br><span class="mono">swrm_node_7c4e...</span></td>
+                  <td>RTX 3090 &middot; 24GB</td>
+                  <td><span class="badge badge-ok">&#9679; Active</span></td>
+                  <td><strong style="color:var(--ok)">95</strong></td>
+                  <td><button class="btn-i" title="View">&#128065;</button><button class="btn-i" title="Edit">&#9998;</button></td>
+                </tr>
+                <tr>
+                  <td><strong>BD-07</strong><br><span class="mono">swrm_node_3b8d...</span></td>
+                  <td>RTX 3060 &middot; 12GB</td>
+                  <td><span class="badge badge-er">&#9679; Jitter</span></td>
+                  <td><strong style="color:var(--ar)">43</strong></td>
+                  <td><button class="btn-i" title="View">&#128065;</button><button class="btn-i" title="Blacklist" style="color:var(--ar)">&#9888;</button></td>
+                </tr>
+                <tr>
+                  <td><strong>BD-08</strong><br><span class="mono">swrm_node_1a5f...</span></td>
+                  <td>i7-12700 &middot; CPU</td>
+                  <td><span class="badge badge-wn">&#9679; Idle</span></td>
+                  <td><strong style="color:var(--wn)">62</strong></td>
+                  <td><button class="btn-i" title="View">&#128065;</button><button class="btn-i" title="Edit">&#9998;</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- BDT Payments -->
+        <div class="card">
+          <div class="card-h">
+            <h3>Recent BDT Payments</h3>
+            <button class="btn btn-o" style="padding:6px 16px;font-size:12px">View All</button>
+          </div>
+          <div class="card-b">
+            <div class="payment-row">
+              <div style="width:40px;height:40px;border-radius:50%;background:color-mix(in srgb,var(--okc) 30%,transparent);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--ok)">&#10003;</div>
+              <div style="flex:1">
+                <div style="font-size:14px;font-weight:500;color:var(--osf)">Top-up &middot; arif@dev.bd</div>
+                <div style="font-size:12px;color:var(--ol)">bKash &middot; TXN: 89A2F3B &middot; 15 min ago</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:16px;font-weight:500;color:var(--ok)">+&#2547;200</div>
+                <div style="font-size:12px;color:var(--ol)">500 cr</div>
+              </div>
+            </div>
+            <div class="payment-row">
+              <div style="width:40px;height:40px;border-radius:50%;background:color-mix(in srgb,var(--okc) 30%,transparent);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--ok)">&#10003;</div>
+              <div style="flex:1">
+                <div style="font-size:14px;font-weight:500;color:var(--osf)">Top-up &middot; nusrat@lab.edu</div>
+                <div style="font-size:12px;color:var(--ol)">Nagad &middot; TXN: 7C4E1D9 &middot; 1 hour ago</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:16px;font-weight:500;color:var(--ok)">+&#2547;450</div>
+                <div style="font-size:12px;color:var(--ol)">1,201 cr</div>
+              </div>
+            </div>
+            <div class="payment-row">
+              <div style="width:40px;height:40px;border-radius:50%;background:color-mix(in srgb,var(--wnc) 30%,transparent);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--wn)">&#8987;</div>
+              <div style="flex:1">
+                <div style="font-size:14px;font-weight:500;color:var(--osf)">Top-up &middot; rahim@corp.bd</div>
+                <div style="font-size:12px;color:var(--ol)">Visa ****4821 &middot; TXN: 5F1A8C2 &middot; 3 hours ago</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:16px;font-weight:500;color:var(--wn)">Pending</div>
+                <div style="font-size:12px;color:var(--ol)">&#2547;2,000</div>
+              </div>
+            </div>
+            <div class="payment-row">
+              <div style="width:40px;height:40px;border-radius:50%;background:color-mix(in srgb,var(--errc) 30%,transparent);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--ar)">&#10007;</div>
+              <div style="flex:1">
+                <div style="font-size:14px;font-weight:500;color:var(--osf)">Top-up &middot; fatima@startup.io</div>
+                <div style="font-size:12px;color:var(--ol)">bKash &middot; TXN: 2D9E4F1 &middot; 5 hours ago</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:16px;font-weight:500;color:var(--ar)">Failed</div>
+                <div style="font-size:12px;color:var(--ol)">&#2547;50</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ledger Audit -->
+      <div class="card">
+        <div class="card-h">
+          <h3>Ledger Audit Trail</h3>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-o" style="padding:6px 16px;font-size:12px">&#128269; Search</button>
+            <button class="btn btn-t" style="padding:6px 16px;font-size:12px">&#128203; Export CSV</button>
+          </div>
+        </div>
+        <div class="card-b" style="padding:0">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Block</th>
+                <th>Timestamp</th>
+                <th>Type</th>
+                <th>Node</th>
+                <th>Delta</th>
+                <th>Hash</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>#1,248</td>
+                <td>2026-06-27 04:52:18</td>
+                <td>INFERENCE</td>
+                <td>BD-03</td>
+                <td style="color:var(--ok)">+12.4 cr</td>
+                <td class="mono">0x7a3f...e91b</td>
+                <td><span class="badge badge-ok">Finalized</span></td>
+              </tr>
+              <tr>
+                <td>#1,247</td>
+                <td>2026-06-27 04:52:02</td>
+                <td>SPEND</td>
+                <td>arif@dev.bd</td>
+                <td style="color:var(--ar)">-8.2 cr</td>
+                <td class="mono">0x4d2c...f872</td>
+                <td><span class="badge badge-ok">Finalized</span></td>
+              </tr>
+              <tr>
+                <td>#1,246</td>
+                <td>2026-06-27 04:51:44</td>
+                <td>ADMIN_ADJUST</td>
+                <td>ops@swarm-os.dev</td>
+                <td style="color:var(--wn)">+500 cr</td>
+                <td class="mono">0x9e1a...b3c4</td>
+                <td><span class="badge badge-ok">Finalized</span></td>
+              </tr>
+              <tr>
+                <td>#1,245</td>
+                <td>2026-06-27 04:51:12</td>
+                <td>INFERENCE</td>
+                <td>BD-01</td>
+                <td style="color:var(--ok)">+8.8 cr</td>
+                <td class="mono">0x2f5d...a7e1</td>
+                <td><span class="badge badge-ok">Finalized</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

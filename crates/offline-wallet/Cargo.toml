@@ -1,0 +1,20 @@
+[package]
+name = "swarm-offline-wallet"
+version = "0.1.0"
+edition = "2021"
+description = "Offline credit commitment tokens for intermittent connectivity"
+
+[dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+serde = { version = "=1.0.217", features = ["derive"] }
+bincode = "1"
+anyhow = "1"
+thiserror = "1"
+tracing = "0.1"
+hmac = "0.12"
+sha2 = "0.10"
+getrandom = "0.2"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
