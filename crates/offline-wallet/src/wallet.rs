@@ -1,25 +1,31 @@
 use crate::{CreditBalance, CreditCommitmentToken};
 use anyhow::{bail, Result};
+use std::collections::HashSet;
 
 pub struct OfflineWallet {
     balance: CreditBalance,
     secret_key: [u8; 32],
+    redeemed_ccts: HashSet<uuid::Uuid>,
 }
 
 impl OfflineWallet {
     pub fn new(initial_credits: u64) -> Self {
         let mut secret_key = [0u8; 32];
-        // In production, this would be derived from a secure source
         getrandom::getrandom(&mut secret_key).expect("Failed to generate random key");
 
         Self {
             balance: CreditBalance::new(initial_credits),
             secret_key,
+            redeemed_ccts: HashSet::new(),
         }
     }
 
     pub fn balance(&self) -> &CreditBalance {
         &self.balance
+    }
+
+    pub fn secret_key(&self) -> &[u8; 32] {
+        &self.secret_key
     }
 
     pub fn create_cct(&self, amount: u64) -> Result<CreditCommitmentToken> {
@@ -40,7 +46,16 @@ impl OfflineWallet {
         if !cct.verify(&self.secret_key) {
             bail!("Invalid CCT signature");
         }
+        // Prevent replay attacks
+        if self.redeemed_ccts.contains(&cct.id) {
+            bail!("CCT already redeemed (replay attack prevented)");
+        }
+        self.redeemed_ccts.insert(cct.id);
         self.balance.credit(cct.amount);
         Ok(())
+    }
+
+    pub fn is_cct_redeemed(&self, cct_id: &uuid::Uuid) -> bool {
+        self.redeemed_ccts.contains(cct_id)
     }
 }

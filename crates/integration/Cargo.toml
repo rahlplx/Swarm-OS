@@ -1,0 +1,10 @@
+[package]
+name = "swarm-integration"
+version = "0.1.0"
+edition = "2021"
+
+[dev-dependencies]
+swarm-ledger = { path = "../ledger" }
+swarm-membership = { path = "../membership" }
+swarm-offline-wallet = { path = "../offline-wallet" }
+tokio = { version = "1.34", features = ["full"] }
